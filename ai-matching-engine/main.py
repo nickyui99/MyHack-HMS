@@ -42,6 +42,7 @@ from google.cloud.sql.connector import Connector
 import pg8000
 
 from retrieval import find_candidates, find_surgical_team, find_allied_health_team, score_team_combination
+from outcome_weights import log_outcome
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -92,6 +93,14 @@ class CaseContext(BaseModel):
 class MatchRequest(BaseModel):
     case_ctx: CaseContext
     top_n:    int = 3              # how many candidates to return per role
+
+class OutcomeRequest(BaseModel):
+    case_id:         str
+    surgical_score:  int = 5       # 1–5
+    complications:   int = 0       # count
+    mobility_goals:  str = "met"
+    notes:           str = ""
+    logged_by:       str = "system"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -193,6 +202,38 @@ def match_allied_health(req: MatchRequest):
             },
             "deterministic_demo": False,
         }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/outcomes")
+def record_outcome(req: OutcomeRequest):
+    """
+    Log a case outcome and update every involved actor's outcome_weight.
+
+    Called by Member 4's Outcome Agent after the coordinator types something like:
+      "Log outcome for Encik Zainal: surgical 5/5, no complications."
+
+    What happens:
+      1. Writes the outcome to every relationship in the case
+      2. Nudges each actor's outcome_weight up/down based on the score
+      3. Returns a summary so the chatbot can say "weights updated"
+
+    This is what makes the graph weights visibly change during the demo.
+    """
+    try:
+        result = log_outcome(
+            engine=get_engine(),
+            case_id=req.case_id,
+            outcome={
+                "surgical_score":  req.surgical_score,
+                "complications":   req.complications,
+                "mobility_goals":  req.mobility_goals,
+                "notes":           req.notes,
+            },
+            logged_by=req.logged_by,
+        )
+        return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
