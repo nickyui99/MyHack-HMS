@@ -43,7 +43,15 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"{a['outcome_weight']:>4}  {a['name']}\\\\\"\\) for a in sorted\\(d, key=lambda a: -float\\(a.get\\('outcome_weight'\\) or 0\\)\\)]\")",
       "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" https://carelink-match-service-305487732751.asia-southeast1.run.app/health)",
       "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -d '{\"case_ctx\":{\"diagnosis\":\"NSTEMI\",\"payer\":\"Prudential BSN\",\"location\":\"Puchong\",\"urgency\":\"urgent\"},\"top_n\":3}' https://carelink-match-service-305487732751.asia-southeast1.run.app/match/referral)",
-      "Bash(node --check src/routes/match.js)"
+      "Bash(node --check src/routes/match.js)",
+      "Bash(git log *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gcloud builds *)",
+      "Bash(curl -sS https://carelink-api-qkshm4jpaa-as.a.run.app/health)",
+      "Bash(curl -sS https://carelink-api-qkshm4jpaa-as.a.run.app/cases)",
+      "Bash(curl -sS -X POST -H \"Content-Type: application/json\" -H \"x-carelink-local-user: gp.amirul@carelink.demo\" -d '{\"case_id\":\"10000000-0000-4000-8000-000000000001\",\"requested_by_actor_id\":\"00000000-0000-4000-8000-000000000001\",\"create_relationships\":false}' https://carelink-api-qkshm4jpaa-as.a.run.app/match/referral)",
+      "Bash(node scripts/reset-demo.js)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Service carelink-api)"
     ]
   }
 }

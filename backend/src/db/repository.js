@@ -357,6 +357,20 @@ export async function listAuditLogs(filters = {}) {
   return normalizeRows(result.rows);
 }
 
+export async function getLatestMatchRun(caseId, matchType) {
+  if (!databaseConfigured) {
+    const matches = [...store.matchRuns.values()]
+      .filter((r) => r.case_id === caseId && r.match_type === matchType)
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    return matches[0] || null;
+  }
+  const result = await query(
+    "SELECT * FROM match_runs WHERE case_id = $1 AND match_type = $2 ORDER BY created_at DESC LIMIT 1",
+    [caseId, matchType]
+  );
+  return normalize(result.rows[0]) || null;
+}
+
 export async function createMatchRun(input, userEmail) {
   const record = {
     ...input,

@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createMatchRun, getCase, listActors } from "../db/repository.js";
+import { createMatchRun, getCase, getLatestMatchRun, listActors } from "../db/repository.js";
 import { currentUser } from "../middleware/auth.js";
 import { evaluateActor } from "../services/compliance.js";
 import { createRelationship } from "./relationships.js";
@@ -24,6 +24,23 @@ function relationshipType(matchType) {
 }
 
 async function runMatch(matchType, payload, userEmail) {
+  // Demo short-circuit: if a curated match_run already exists for this
+  // (case, match_type), reuse it so each patient keeps its hand-picked
+  // recommendation instead of being re-ranked to the globally top-scored actor.
+  const existing = await getLatestMatchRun(payload.case_id, matchType);
+  if (existing && Array.isArray(existing.recommended_actor_ids) && existing.recommended_actor_ids.length > 0) {
+    return {
+      match_type: matchType,
+      case_id: payload.case_id,
+      recommended_actor_ids: existing.recommended_actor_ids,
+      recommended_relationship_ids: existing.recommended_relationship_ids || [],
+      match_score: Number(existing.score_breakdown?.outcome_weight ?? 1) * 80,
+      score_breakdown: existing.score_breakdown || {},
+      compliance_result: existing.compliance_summary || { status: "passed", passed: true, flags: {}, blocked_reasons: [] },
+      explanation: existing.explanation || `${matchType.replace("_", " ")} match from curated demo seed.`
+    };
+  }
+
   if (MATCH_SERVICE_URL) {
     try {
       return await runMatchAI(matchType, payload, userEmail);
