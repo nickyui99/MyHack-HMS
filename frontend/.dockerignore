@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.vscode
+.DS_Store
+*.log
+*.docx
+*.pdf
+*.png
+!public/**/*.png
