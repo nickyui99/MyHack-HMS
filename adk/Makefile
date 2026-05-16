@@ -10,9 +10,10 @@ ping:
 	  r = c.models.generate_content(model='gemini-flash-latest', contents='reply with the single word: pong'); \
 	  print(r.text)"
 
-# Run the ADK API server on :8000, exposing /run_sse for the React renderer.
+# Run the ADK API server on :8100, exposing /run_sse for the React renderer.
+# (Node Express matching API owns :8000, so the ADK chat server lives on :8100.)
 serve:
-	uv run adk api_server agents/ --port 8000
+	uv run adk api_server agents/ --port 8100
 
 smoke:
 	uv run pytest tests/ -v
