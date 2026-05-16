@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "PowerShell(Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, OwningProcess | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ Port=$_.LocalPort; PID=$_.OwningProcess; Name=$p.ProcessName; Path=$p.Path } })",
-      "PowerShell(Get-Process -Id 19532)"
+      "PowerShell(Get-Process -Id 19532)",
+      "PowerShell(gcloud sql instances list --project hackathon-myhack 2>&1)",
+      "PowerShell(gcloud sql databases list --instance=postgres --project=hackathon-myhack 2>&1)",
+      "PowerShell(gcloud sql users list --instance=postgres --project=hackathon-myhack 2>&1)",
+      "PowerShell(node --no-warnings backend/scripts/check-cloudsql-state.js 2>&1)",
+      "PowerShell(node --no-warnings backend\\\\scripts\\\\check-cloudsql-state.js 2>&1)",
+      "Bash(docker --version)",
+      "Bash(findstr carelink *)",
+      "PowerShell($adc = \"$env:APPDATA\\\\gcloud\\\\application_default_credentials.json\"; if \\(Test-Path $adc\\) { \"ADC: $adc\" } else { \"No ADC\" })",
+      "Bash(docker build *)",
+      "Bash(docker rm *)",
+      "Bash(docker run *)",
+      "Bash(curl -s http://localhost:8085/health)",
+      "PowerShell(docker rm -f carelink-api-test 2>$null)",
+      "PowerShell(Start-Sleep -Seconds 6; Write-Output \"--- /health ---\"; try { Invoke-RestMethod http://localhost:8085/health | ConvertTo-Json -Depth 5 } catch { $_.Exception.Message }; Write-Output \"--- LOGS ---\"; docker logs carelink-api-test 2>&1 | Select-Object -Last 25)",
+      "Bash(gcloud run *)",
+      "Bash(gcloud config *)"
     ]
   }
 }

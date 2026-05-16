@@ -81,6 +81,12 @@ export function isDatabaseConfigured() {
   return databaseConfigured;
 }
 
+export async function pingDatabase() {
+  if (!databaseConfigured) return { ok: true, backend: "in-memory" };
+  await query("SELECT 1");
+  return { ok: true, backend: sqliteConfigured ? "sqlite" : "postgres" };
+}
+
 export async function closeDatabase() {
   if (!poolPromise) return;
   const pool = await poolPromise;

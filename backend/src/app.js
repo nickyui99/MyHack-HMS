@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import { config } from "./config.js";
+import { pingDatabase } from "./db/repository.js";
 import { seedStore } from "./db/store.js";
 import { actorsRouter } from "./routes/actors.js";
 import { auditRouter } from "./routes/audit.js";
@@ -18,8 +19,13 @@ export const app = express();
 app.use(cors({ origin: config.corsOrigins === "*" ? "*" : config.corsOrigins.split(",") }));
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "carelink-api" });
+app.get("/health", async (_req, res) => {
+  try {
+    const db = await pingDatabase();
+    res.json({ status: "ok", service: "carelink-api", db });
+  } catch (error) {
+    res.status(503).json({ status: "degraded", service: "carelink-api", db: { ok: false, error: error.message } });
+  }
 });
 
 app.get("/openapi.json", (_req, res) => {
