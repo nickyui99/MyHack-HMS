@@ -104,9 +104,15 @@ export default function AlliedHealth() {
       </div>
 
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="display text-xl font-medium tracking-tightish text-ink">
-          Discharge plan
-        </h2>
+        <div>
+          <h2 className="display text-xl font-medium tracking-tightish text-ink">
+            Discharge plan for {active.patientName}
+          </h2>
+          <p className="mt-0.5 text-[12px] text-ink-muted">
+            {active.diagnosis}
+            {active.region ? ` · ${active.region}` : ''}
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           {source && <SourceBadge source={source} />}
           <span className="font-mono text-[11px] text-ink-subtle">

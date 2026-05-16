@@ -72,9 +72,16 @@ export default function Referral() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <div>
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="display text-xl font-medium tracking-tightish text-ink">
-              The Referral Agent recommends
-            </h2>
+            <div>
+              <h2 className="display text-xl font-medium tracking-tightish text-ink">
+                Recommended cardiologists for {active.patientName}
+              </h2>
+              <p className="mt-0.5 text-[12px] text-ink-muted">
+                {active.diagnosis}
+                {active.panel ? ` · ${active.panel}` : ''}
+                {active.region ? ` · ${active.region}` : ''}
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               {source && <SourceBadge source={source} />}
               <span className="font-mono text-[11px] text-ink-subtle">

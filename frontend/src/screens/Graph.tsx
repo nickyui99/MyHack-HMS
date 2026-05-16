@@ -66,7 +66,16 @@ const STATE_STYLE: Record<RelationshipState, { stroke: string; dash: string }> =
 };
 
 type DragRef =
-  | { kind: 'node'; id: string; offX: number; offY: number }
+  | {
+      kind: 'node';
+      // All node ids that should translate together (the connected component
+      // the dragged node belongs to). Patient and lone nodes are a group of 1.
+      group: string[];
+      // Position of each group member at drag-start, so we can apply a uniform
+      // delta on every mousemove without compounding rounding error.
+      startPositions: Map<string, { x: number; y: number }>;
+      startGp: { x: number; y: number };
+    }
   | { kind: 'pan'; startSp: { x: number; y: number }; startTx: number; startTy: number }
   | null;
 
@@ -120,6 +129,35 @@ export default function Graph() {
     return map;
   }, [visibleActorIds]);
 
+  // For each node id, the list of node ids in its connected component.
+  // Used so that dragging one node carries everything it's wired to —
+  // edges keep their shape instead of stretching across the canvas.
+  const componentOf = useMemo(() => {
+    const adj = new Map<string, Set<string>>();
+    visibleEdges.forEach((r) => {
+      if (!adj.has(r.actorA)) adj.set(r.actorA, new Set());
+      if (!adj.has(r.actorB)) adj.set(r.actorB, new Set());
+      adj.get(r.actorA)!.add(r.actorB);
+      adj.get(r.actorB)!.add(r.actorA);
+    });
+    const seen = new Set<string>();
+    const out = new Map<string, string[]>();
+    adj.forEach((_, start) => {
+      if (seen.has(start)) return;
+      const queue = [start];
+      const component: string[] = [];
+      while (queue.length) {
+        const n = queue.shift()!;
+        if (seen.has(n)) continue;
+        seen.add(n);
+        component.push(n);
+        adj.get(n)?.forEach((m) => !seen.has(m) && queue.push(m));
+      }
+      component.forEach((n) => out.set(n, component));
+    });
+    return out;
+  }, [visibleEdges]);
+
   // ── Interactivity: drag nodes, pan background, wheel-zoom ──────────
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [overrides, setOverrides] = useState<Record<string, { x: number; y: number }>>({});
@@ -161,8 +199,12 @@ export default function Graph() {
     movedRef.current = false;
     const sp = svgPoint(e);
     const gp = toGroupSpace(sp);
-    const cur = resolvedPos(id);
-    dragRef.current = { kind: 'node', id, offX: cur.x - gp.x, offY: cur.y - gp.y };
+    // Whole connected component drags as one body. Patient and any actor
+    // with no edges in the current view are a group of 1.
+    const group = componentOf.get(id) ?? [id];
+    const startPositions = new Map<string, { x: number; y: number }>();
+    group.forEach((nid) => startPositions.set(nid, { ...resolvedPos(nid) }));
+    dragRef.current = { kind: 'node', group, startPositions, startGp: gp };
     setIsDragging('node');
   };
 
@@ -183,7 +225,16 @@ export default function Graph() {
       const sp = svgPoint(e);
       if (d.kind === 'node') {
         const gp = toGroupSpace(sp);
-        setOverrides((m) => ({ ...m, [d.id]: { x: gp.x + d.offX, y: gp.y + d.offY } }));
+        const dx = gp.x - d.startGp.x;
+        const dy = gp.y - d.startGp.y;
+        setOverrides((m) => {
+          const next = { ...m };
+          d.group.forEach((nid) => {
+            const start = d.startPositions.get(nid)!;
+            next[nid] = { x: start.x + dx, y: start.y + dy };
+          });
+          return next;
+        });
       } else {
         setView((v) => ({
           ...v,
@@ -404,7 +455,7 @@ export default function Graph() {
               <span className="font-semibold text-ink">{visibleNodes.size}</span> entities ·{' '}
               <span className="font-mono">{(view.zoom * 100).toFixed(0)}%</span>
             </span>
-            <span className="text-ink-subtle">Drag nodes · drag background to pan · scroll to zoom</span>
+            <span className="text-ink-subtle">Drag a node to move its whole group · drag background to pan · scroll to zoom</span>
           </div>
         </div>
 
