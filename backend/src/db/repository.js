@@ -11,6 +11,12 @@ let poolPromise;
 async function getPool() {
   if (!databaseConfigured) return null;
   if (!poolPromise) {
+    const backend = sqliteConfigured
+      ? `sqlite (${config.sqlitePath})`
+      : config.databaseUrl
+        ? "postgres (CARELINK_DATABASE_URL)"
+        : `cloud sql (${config.cloudSqlInstance} as ${config.dbUser})`;
+    console.log(`[db] initializing pool: ${backend}`);
     poolPromise = sqliteConfigured
       ? import("./sqlite.js").then(({ createSqliteDatabase }) => createSqliteDatabase())
       : createPool();
@@ -18,9 +24,24 @@ async function getPool() {
   return poolPromise;
 }
 
+function formatSql(text) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 async function query(text, params = []) {
   const pool = await getPool();
-  return pool.query(text, params);
+  const start = Date.now();
+  try {
+    const result = await pool.query(text, params);
+    const ms = Date.now() - start;
+    const rowCount = result?.rows?.length ?? result?.rowCount ?? 0;
+    console.log(`[db] ${ms}ms rows=${rowCount} | ${formatSql(text)} | params=${JSON.stringify(params)}`);
+    return result;
+  } catch (error) {
+    const ms = Date.now() - start;
+    console.error(`[db] ${ms}ms ERROR ${error.message} | ${formatSql(text)} | params=${JSON.stringify(params)}`);
+    throw error;
+  }
 }
 
 function normalize(row) {

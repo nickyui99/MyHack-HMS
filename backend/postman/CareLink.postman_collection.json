@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "CareLink API",
+    "_postman_id": "carelink-api-collection",
+    "description": "End-to-end tests for the CareLink backend. Run requests in order or use the Collection Runner — each request stores IDs into collection variables that later requests consume.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "localUserEmail", "value": "local.member2@carelink.test" },
+    { "key": "actorId", "value": "" },
+    { "key": "actorBId", "value": "" },
+    { "key": "caseId", "value": "" },
+    { "key": "relationshipId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test(\"status is 'ok'\", () => pm.expect(body.status).to.eql('ok'));",
+              "pm.test(\"service is 'carelink-api'\", () => pm.expect(body.service).to.eql('carelink-api'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpenAPI spec",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/openapi.json", "host": ["{{baseUrl}}"], "path": ["openapi.json"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const spec = pm.response.json();",
+              "pm.test('has paths', () => pm.expect(spec.paths).to.be.an('object'));",
+              "pm.test('declares /actors', () => pm.expect(spec.paths['/actors']).to.exist);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List actors",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/actors", "host": ["{{baseUrl}}"], "path": ["actors"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const actors = pm.response.json();",
+              "pm.test('returns array', () => pm.expect(actors).to.be.an('array'));",
+              "pm.test('at least one actor seeded', () => pm.expect(actors.length).to.be.greaterThan(0));",
+              "const cardiologist = actors.find(a => a.role === 'cardiologist' && a.capacity_status === 'available');",
+              "if (cardiologist) pm.collectionVariables.set('actorBId', cardiologist.id);",
+              "const gp = actors.find(a => a.role === 'gp');",
+              "if (gp) pm.collectionVariables.set('actorId', gp.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List actors by role=cardiologist",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actors?role=cardiologist",
+          "host": ["{{baseUrl}}"],
+          "path": ["actors"],
+          "query": [{ "key": "role", "value": "cardiologist" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const actors = pm.response.json();",
+              "pm.test('all results are cardiologists', () => actors.forEach(a => pm.expect(a.role).to.eql('cardiologist')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get actor by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actors/{{actorId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["actors", "{{actorId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const actor = pm.response.json();",
+              "pm.test('id matches', () => pm.expect(actor.id).to.eql(pm.collectionVariables.get('actorId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create actor",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actor_type\": \"specialist\",\n  \"name\": \"Dr Postman Test\",\n  \"role\": \"cardiologist\",\n  \"specialty\": \"cardiology\",\n  \"subspecialty\": \"interventional_cardiology\",\n  \"hospital\": \"Sunway Medical Centre\",\n  \"department\": \"Cardiology\",\n  \"location\": \"Bandar Sunway\",\n  \"insurance_panels\": [\"Prudential BSN\"],\n  \"languages\": [\"English\", \"Malay\"],\n  \"credentials\": { \"mmc\": \"MMC-POSTMAN\" },\n  \"apc_number\": \"APC-2026-POSTMAN\",\n  \"apc_expiry_date\": \"2026-12-31\",\n  \"capacity_status\": \"available\",\n  \"outcome_weight\": 1.05,\n  \"profile_text\": \"Created from Postman collection test.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/actors", "host": ["{{baseUrl}}"], "path": ["actors"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200 or 201', () => pm.expect([200, 201]).to.include(pm.response.code));",
+              "const actor = pm.response.json();",
+              "pm.test('has id', () => pm.expect(actor.id).to.be.a('string'));",
+              "pm.test('name persisted', () => pm.expect(actor.name).to.eql('Dr Postman Test'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create case",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patient_name\": \"Encik Postman\",\n  \"patient_age\": 58,\n  \"patient_gender\": \"male\",\n  \"diagnosis\": \"NSTEMI\",\n  \"case_stage\": \"referral\",\n  \"payer\": \"Prudential BSN\",\n  \"location\": \"Puchong\",\n  \"urgency\": \"urgent\",\n  \"clinical_context\": {\n    \"risk_factors\": [\"diabetes\", \"hypertension\"],\n    \"procedure\": \"CABG\"\n  }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/cases", "host": ["{{baseUrl}}"], "path": ["cases"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200 or 201', () => pm.expect([200, 201]).to.include(pm.response.code));",
+              "const created = pm.response.json();",
+              "pm.test('has id', () => pm.expect(created.id).to.be.a('string'));",
+              "pm.collectionVariables.set('caseId', created.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List cases",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/cases", "host": ["{{baseUrl}}"], "path": ["cases"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const cases = pm.response.json();",
+              "pm.test('returns array', () => pm.expect(cases).to.be.an('array'));",
+              "pm.test('created case appears', () => pm.expect(cases.some(c => c.id === pm.collectionVariables.get('caseId'))).to.be.true);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get case by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/cases/{{caseId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["cases", "{{caseId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const c = pm.response.json();",
+              "pm.test('id matches', () => pm.expect(c.id).to.eql(pm.collectionVariables.get('caseId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create relationship",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"relationship_type\": \"gp_to_specialist_referral\",\n  \"actor_a_id\": \"{{actorId}}\",\n  \"actor_b_id\": \"{{actorBId}}\",\n  \"match_score\": 91.5,\n  \"score_breakdown\": { \"postman_test\": true },\n  \"case_context\": { \"reason\": \"NSTEMI referral from Postman\" }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/relationships", "host": ["{{baseUrl}}"], "path": ["relationships"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200 or 201', () => pm.expect([200, 201]).to.include(pm.response.code));",
+              "const rel = pm.response.json();",
+              "pm.test('has id', () => pm.expect(rel.id).to.be.a('string'));",
+              "pm.collectionVariables.set('relationshipId', rel.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List relationships by case",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/relationships?case_id={{caseId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["relationships"],
+          "query": [{ "key": "case_id", "value": "{{caseId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const rels = pm.response.json();",
+              "pm.test('all match the case', () => rels.forEach(r => pm.expect(r.case_id).to.eql(pm.collectionVariables.get('caseId'))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update relationship state -> active",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": \"active\",\n  \"reason\": \"Postman test approving the referral.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/relationships/{{relationshipId}}/state",
+          "host": ["{{baseUrl}}"],
+          "path": ["relationships", "{{relationshipId}}", "state"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const rel = pm.response.json();",
+              "pm.test('state is active', () => pm.expect(rel.state).to.eql('active'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Match referral",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"requested_by_actor_id\": \"{{actorId}}\",\n  \"create_relationships\": false,\n  \"context\": { \"source\": \"postman\", \"notes\": \"Referral match smoke test.\" }\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/match/referral", "host": ["{{baseUrl}}"], "path": ["match", "referral"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test(\"match_type is 'referral'\", () => pm.expect(body.match_type).to.eql('referral'));",
+              "pm.test('has recommended_actor_ids', () => pm.expect(body.recommended_actor_ids).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Match surgical-team",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"requested_by_actor_id\": \"{{actorBId}}\",\n  \"create_relationships\": false,\n  \"context\": { \"source\": \"postman\" }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/match/surgical-team",
+          "host": ["{{baseUrl}}"],
+          "path": ["match", "surgical-team"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('match_type is surgical-team or surgical_team', () => pm.expect(['surgical-team','surgical_team']).to.include(body.match_type));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Match allied-health",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"case_id\": \"{{caseId}}\",\n  \"requested_by_actor_id\": \"{{actorBId}}\",\n  \"create_relationships\": false,\n  \"context\": { \"source\": \"postman\" }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/match/allied-health",
+          "host": ["{{baseUrl}}"],
+          "path": ["match", "allied-health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('has recommended_actor_ids', () => pm.expect(body.recommended_actor_ids).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Log outcome",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"relationship_ids\": [\"{{relationshipId}}\"],\n  \"outcome_record\": {\n    \"clinical_outcome\": \"Referral completed via Postman test\",\n    \"appropriateness_score\": 5\n  },\n  \"reason\": \"Case closed after successful handover.\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/outcomes", "host": ["{{baseUrl}}"], "path": ["outcomes"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200 or 201', () => pm.expect([200, 201]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List audit logs by case",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/audit?case_id={{caseId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["audit"],
+          "query": [{ "key": "case_id", "value": "{{caseId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const logs = pm.response.json();",
+              "pm.test('returns array', () => pm.expect(logs).to.be.an('array'));",
+              "pm.test('at least one audit log for the case', () => pm.expect(logs.length).to.be.greaterThan(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative: get non-existent actor",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actors/00000000-0000-0000-0000-000000000000",
+          "host": ["{{baseUrl}}"],
+          "path": ["actors", "00000000-0000-0000-0000-000000000000"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative: create case with missing fields",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-carelink-local-user", "value": "{{localUserEmail}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": { "raw": "{{baseUrl}}/cases", "host": ["{{baseUrl}}"], "path": ["cases"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('rejects with 400 or 422', () => pm.expect([400, 422]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
