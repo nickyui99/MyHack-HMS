@@ -70,6 +70,11 @@ export interface PatientCase {
   region: string;
   acuity: 'Routine' | 'Urgent' | 'Emergent';
   notes: string;
+  // The ADK chatbot has its own case registry (adk/backend_stub/seed/cases.json)
+  // keyed by string IDs (e.g. 'case_zainal_2026'), distinct from the matching
+  // backend's UUIDs. When set, the chat passes this as case_id context so the
+  // agent can look the case up. When unset, the matching backend `id` is used.
+  adkCaseId?: string;
 }
 
 export interface Relationship {

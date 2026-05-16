@@ -15,6 +15,7 @@ export const cases: PatientCase[] = [
     acuity: 'Urgent',
     notes:
       'Referring GP: Dr Amirul Hakim. Chest pain on exertion x3 days. Troponin elevated. ECG: lateral T-wave inversion.',
+    adkCaseId: 'case_zainal_2026',
   },
   {
     id: '10000000-0000-4000-8000-000000000002',
@@ -26,6 +27,9 @@ export const cases: PatientCase[] = [
     region: 'Subang Jaya',
     acuity: 'Routine',
     notes: 'Preferred language Malay. Referred for cardiology workup.',
+    // ADK seed only ships case_zainal_2026 today; reuse it for the demo so
+    // the chatbot has *some* case to reference until ADK seeds more cases.
+    adkCaseId: 'case_zainal_2026',
   },
 ];
 

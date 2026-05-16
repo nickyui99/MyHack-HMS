@@ -6,7 +6,7 @@
     "hospital_id": "klinik_mediviron_puchong",
     "hospital_name": "Klinik Mediviron Puchong",
     "actor_id": "act_amirul",
-    "allowed_agents": ["referral"]
+    "allowed_agents": ["referral", "team_assembly", "allied_health", "outcome"]
   },
   {
     "user_id": "coord.suri@carelink.demo",
