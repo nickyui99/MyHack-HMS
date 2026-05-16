@@ -1,0 +1,33 @@
+substitutions:
+  _REGION: asia-southeast1
+  _SERVICE: carelink-api
+  _REPOSITORY: carelink-images
+  _RUNTIME_SERVICE_ACCOUNT: carelink-runtime@${PROJECT_ID}.iam.gserviceaccount.com
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${SHORT_SHA}
+      - backend
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${SHORT_SHA}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      - --service-account=${_RUNTIME_SERVICE_ACCOUNT}
+      - --set-env-vars=CARELINK_ENVIRONMENT=cloud,CARELINK_IAP_REQUIRED=true
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${SHORT_SHA}
