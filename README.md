@@ -1,232 +1,211 @@
-# CareLink
+# CareLink AI
 
-Hospital ecosystem coordination, reimagined.
+**Hospital ecosystem coordination, reimagined.**
 
-CareLink is an AI-powered hospital coordination platform for MyHack 2026 KL. It treats every hospital linkage, from GP referral to surgical team assembly to allied health coordination, as a structured relationship entity that can be matched, governed, audited, and improved over time.
+An AI-powered hospital coordination platform that treats every clinical linkage — GP referral, surgical team assembly, allied health coordination — as a structured, governable, auditable relationship entity.
 
-The project is built around the Cradle problem statement: automating ecosystem linkages instead of relying on manual coordination calls, informal staff memory, and one-off assignments.
+Built for **MyHack 2026 KL · Build With AI** against the Cradle problem statement on automating ecosystem linkages.
 
-## Problem
+---
 
-Hospitals are dense operational ecosystems. A single patient journey can require a GP, specialist, surgeon, anaesthetist, nursing team, physiotherapist, dietitian, pharmacist, coordinator, and payer context to align quickly.
+## The Problem
 
-Today, those relationships are often coordinated manually:
+A single patient journey can require a GP, specialist, surgeon, anaesthetist, nursing team, physiotherapist, dietitian, pharmacist, coordinator, and payer context to align — fast.
+
+Today that work is manual:
 
 - a GP calls around to find a suitable specialist
-- a surgical coordinator spends 30-45 minutes assembling an operating team
+- a surgical coordinator spends 30–45 minutes assembling an operating team
 - ward staff page allied health teams without structured capacity or specialty matching
 - outcome learning is lost after the case closes
 
-CareLink makes those relationships first-class system entities.
+**CareLink makes those relationships first-class system entities** — matched by AI, gated by compliance, stored with an audit trail, and improved by outcomes.
 
-## Core Idea
+---
 
-Every clinical linkage is represented as a `Relationship`:
+## Architecture
+
+![CareLink AI — Software Stack](doc/architecture.png)
+
+Four services on Google Cloud Run in `asia-southeast1`, one Cloud SQL for PostgreSQL data layer, all authenticated via IAM / Application Default Credentials — **zero static secrets**.
+
+| Layer | Service | Stack |
+|---|---|---|
+| **Frontend** | `frontend/` | React 18 + TypeScript, Vite, Tailwind, React Router |
+| **Backend API** | `backend/` | Node.js (ESM), Express, `pg` + Cloud SQL Connector, `google-auth-library` |
+| **AI Match Service** | `ai-matching-engine/` | Python 3.10, FastAPI, Vertex AI, Enterprise Knowledge Graph |
+| **Agent Orchestrator** | `adk/` | Google ADK, A2UI / A2A SDKs, Gemini via Vertex AI |
+| **Data Layer** | Cloud SQL | PostgreSQL with IAM database authentication |
+| **Infra** | `infra/` | Terraform, Cloud Build, Artifact Registry, Cloud Run |
+
+The orchestrator runs **5 specialist agents** — Care Advisor, Health Specialist, Care Home Matcher, Financial Advisor, Compliance Expert — communicating over A2A and rendering inline UI via A2UI.
+
+---
+
+## Demo Journey
+
+The demo follows **Encik Zainal, 58**, through three care stages:
+
+1. **Referral matching** — GP Dr Amirul refers a suspected NSTEMI patient to the best-fit cardiologist. Matching considers specialty, payer, location, credential validity, capacity, and outcome history.
+2. **Surgical team assembly** — the system assembles a CABG team for a 7am procedure. The Compliance agent blocks expired credentials and unavailable staff.
+3. **Allied health coordination** — the ward coordinates post-CABG physiotherapy, dietetics, and pharmacy review. Outcomes are written back to the relationship records.
+
+Every recommendation comes with an inspectable score breakdown (vector similarity + rule compliance + outcome weight) and a Gemini-generated clinical explanation.
+
+---
+
+## The Core Idea — Relationships as Entities
+
+Every clinical linkage is a `Relationship`:
 
 - who is connected
-- which case triggered the relationship
+- which case triggered it
 - what type of relationship it is
 - whether compliance passed
 - why the match was recommended
-- what state the relationship is in
+- what state it is in
 - what outcome was recorded after completion
 
 This turns hospital coordination into a programmable, auditable, reusable ecosystem graph.
 
-## Demo Journey
+---
 
-The demo follows Encik Zainal, 58, through three care stages:
-
-1. **Referral matching**
-   - GP Dr Amirul refers a suspected NSTEMI patient to the best-fit cardiologist.
-   - Matching considers specialty, payer, location, credential validity, capacity, and outcome history.
-
-2. **Surgical team assembly**
-   - The system assembles a CABG team for a 7am procedure.
-   - Compliance checks block expired credentials and unavailable staff.
-
-3. **Allied health coordination**
-   - The ward coordinates post-CABG physiotherapy, dietetics, and pharmacy review.
-   - The outcome loop writes results back to the relationship records.
-
-## Current Repository Structure
+## Repository Layout
 
 ```txt
 .
-+-- backend/                 # Node.js Express API for Member 2
-|   +-- src/                 # Routes, services, config, in-memory demo store
-|   +-- migrations/          # PostgreSQL + pgvector schema
-|   +-- scripts/             # Smoke test
-|   +-- Dockerfile           # Cloud Run container
-|   +-- README.md
-+-- doc/
-|   +-- database-structure.md
-+-- infra/
-|   +-- terraform/           # GCP API enablement, service account, IAM, Artifact Registry
-|   +-- cloudbuild.yaml      # Backend build/deploy pipeline
-|   +-- iam-bindings.sh      # gcloud IAM helper script
-+-- frontend/                # Frontend workspace placeholder
-+-- adk/                     # Google ADK agents workspace placeholder
-+-- ai-matching-engine/      # Matching/embedding workspace placeholder
-+-- CareLink_Team_Plan.md
+├── frontend/              # React + Vite UI (3 matching screens, Copilot panel, graph)
+├── backend/               # Node.js Express API, compliance gate, audit log
+│   ├── src/               # Routes, services, db store
+│   ├── migrations/        # PostgreSQL + pgvector schema
+│   └── Dockerfile         # Cloud Run container
+├── ai-matching-engine/    # FastAPI + Vertex AI embeddings + pgvector retrieval
+├── adk/                   # Google ADK agents (orchestrator + 5 specialists)
+│   ├── agents/            # Agent definitions
+│   ├── tools/             # Backend API + retrieval tools
+│   └── a2ui_surfaces/     # Generative UI components
+├── infra/
+│   ├── terraform/         # GCP project, IAM, service account, Artifact Registry
+│   └── cloudbuild.yaml    # CI/CD pipeline
+├── doc/
+│   ├── architecture.png   # The diagram above
+│   └── database-structure.md
+└── CareLink_Team_Plan.md  # 24-hour build plan
 ```
 
-## Implemented Backend
+---
 
-The backend is currently implemented in JavaScript using Node.js and Express.
-
-Available endpoints:
+## Backend API
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /health` | Service health check |
-| `GET /openapi.json` | Lightweight API contract |
-| `GET /actors` | List/filter clinical actors |
-| `POST /actors` | Create actor |
-| `GET /cases` | List cases |
-| `POST /cases` | Create case |
-| `GET /relationships` | List relationship entities |
-| `POST /relationships` | Create relationship with compliance gate |
-| `PATCH /relationships/:id/state` | Update relationship state |
-| `POST /match/referral` | Run referral match |
-| `POST /match/surgical-team` | Run surgical team match |
-| `POST /match/allied-health` | Run allied health match |
-| `POST /outcomes` | Log outcome records |
-| `GET /audit` | View audit logs |
+| `GET /openapi.json` | API contract |
+| `GET /actors` · `POST /actors` | Clinical actors |
+| `GET /cases` · `POST /cases` | Cases |
+| `GET /relationships` · `POST /relationships` | Relationship entities (compliance-gated) |
+| `PATCH /relationships/:id/state` | State transitions |
+| `POST /match/referral` | Stage 1 — referral matching |
+| `POST /match/surgical-team` | Stage 2 — team assembly |
+| `POST /match/allied-health` | Stage 3 — allied health |
+| `POST /outcomes` | Outcome write-back |
+| `GET /audit` | Audit log |
 
-Local mode uses an in-memory seeded store so frontend, ADK, and matching work can start immediately. The production schema is defined separately for Cloud SQL PostgreSQL.
+Local dev runs against an in-memory seeded store; production reads/writes to Cloud SQL via the Cloud SQL Connector with IAM database authentication.
 
-## Database
+---
 
-The database target is Cloud SQL for PostgreSQL with `pgvector`.
+## Running Locally
 
-Main tables:
-
-- `actors`
-- `cases`
-- `relationships`
-- `audit_logs`
-- `match_runs`
-
-Schema migration:
-
-[backend/migrations/001_init.sql](backend/migrations/001_init.sql)
-
-Database documentation and diagrams:
-
-[doc/database-structure.md](doc/database-structure.md)
-
-## GCP Infrastructure
-
-Terraform is available under:
-
-[infra/terraform](infra/terraform)
-
-It enables the required Google Cloud services and creates:
-
-- `carelink-runtime` service account
-- runtime IAM bindings
-- Artifact Registry Docker repository `carelink-images`
-
-Enabled services include:
-
-- Vertex AI
-- Cloud SQL Admin
-- Enterprise Knowledge Graph
-- Cloud Run
-- IAP
-- Identity Platform
-- Cloud Build
-- Artifact Registry
-- Cloud Logging
-- Cloud Monitoring
-- Cloud Trace
-- Cloud Tasks
-
-## Local Backend Setup
+### Backend
 
 ```powershell
 cd backend
-cmd /c npm ci
-cmd /c npm run dev
+npm ci
+npm run dev
 ```
 
-Then open:
+Then:
 
 ```txt
 http://127.0.0.1:8000/health
 http://127.0.0.1:8000/openapi.json
 ```
 
-Run the smoke test:
+Smoke test:
 
 ```powershell
-cd backend
-cmd /c npm run smoke
+npm run smoke
 ```
 
-The smoke test verifies:
+Verifies health, actor filtering, case creation, referral match, relationship creation, audit log writes.
 
-- health check
-- actor filtering
-- case creation
-- referral match
-- relationship creation
-- audit log creation
+### Frontend
 
-## Terraform Setup
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+### ADK Agents
+
+```powershell
+cd adk
+pytest
+```
+
+---
+
+## Cloud Deployment
+
+Infrastructure is Terraform-managed:
 
 ```powershell
 cd infra/terraform
 terraform init
-terraform plan -var="project_id=YOUR_GCP_PROJECT_ID"
+terraform plan  -var="project_id=YOUR_GCP_PROJECT_ID"
 terraform apply -var="project_id=YOUR_GCP_PROJECT_ID"
 ```
 
-Default region:
+This creates the `carelink-runtime` service account, runtime IAM bindings, and the `carelink-images` Artifact Registry repo, and enables the required APIs:
 
-```txt
-asia-southeast1
-```
+> Vertex AI · Cloud SQL Admin · Enterprise Knowledge Graph · Cloud Run · IAP · Identity Platform · Cloud Build · Artifact Registry · Cloud Logging · Cloud Monitoring · Cloud Trace · Cloud Tasks
 
-Do not commit Terraform state files or real `*.tfvars` files.
+Backend deploys via Cloud Build (`infra/cloudbuild.yaml`) on push.
+
+---
 
 ## Security Model
 
-CareLink is designed to avoid static secrets.
+CareLink is designed to be **secret-free**.
 
-- no API keys in the repo
+- no API keys committed
 - no service-account JSON files
-- no database passwords committed
-- Cloud Run services should run as `carelink-runtime`
-- service-to-service authentication should use Application Default Credentials
-- deployed end-user auth should use IAP headers
+- no database passwords anywhere in code or env
+- every Cloud Run service runs as `carelink-runtime`
+- service-to-service auth is Application Default Credentials
+- Cloud SQL connections use **IAM database authentication** (`enable_iam_auth=true`)
+- end-user auth via Identity Platform / IAP
 
-## Hackathon Priorities
+`git grep -i 'api_key\|password\|secret'` should return nothing meaningful — this is part of the pitch.
 
-For the 24-hour build, the most important backend deliverables are:
+---
 
-1. stable API contract for frontend and agents
-2. database schema and migration
-3. seeded demo actors and Encik Zainal case
-4. compliance gate blocking expired APC
-5. relationship audit trail
-6. deployed Cloud Run backend
-7. no secrets committed
+## What's Implemented
 
-## Known Gaps
+- ✅ Backend API scaffold with all routes, compliance gate, audit log
+- ✅ PostgreSQL + `pgvector` schema and migrations
+- ✅ Cloud SQL integration via the Cloud SQL Connector + IAM auth
+- ✅ Frontend screens (referral / surgical / allied health) with score breakdown
+- ✅ ADK orchestrator + 5 specialist agents with A2UI generative surfaces
+- ✅ Terraform-managed GCP infra, Cloud Build pipeline, deployed Cloud Run services
+- ✅ Seeded demo journey for Encik Zainal
 
-Current implementation status:
-
-- backend API scaffold is implemented
-- local demo store is in memory
-- PostgreSQL schema exists but routes are not yet wired to Cloud SQL persistence
-- matching is deterministic demo logic, not real `pgvector` retrieval yet
-- ADK agents and frontend are still placeholders
-- seed data is smaller than the final 50-actor target
+---
 
 ## Project Thesis
 
 The hospital's network is one of its most valuable operational assets. Today, much of that network exists only in the memory of experienced coordinators.
 
-CareLink makes that network programmable: every relationship is created with context, checked for compliance, stored with an audit trail, and improved by outcomes.
+**CareLink makes that network programmable** — every relationship created with context, checked for compliance, stored with an audit trail, and improved by outcomes.
