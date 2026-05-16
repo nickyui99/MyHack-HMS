@@ -31,8 +31,11 @@ steps:
       - --allow-unauthenticated
       - --max-instances=1
       - --add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      # --set-env-vars REPLACES the entire env-vars list, so any prior value
+      # not listed here (e.g. CARELINK_SQLITE_PATH from the old deploy) is
+      # dropped automatically. Don't combine with --remove-env-vars — gcloud
+      # rejects the pair.
       - --set-env-vars=CARELINK_ENVIRONMENT=cloud,CARELINK_IAP_REQUIRED=false,CARELINK_CLOUD_SQL_INSTANCE=${_CLOUD_SQL_INSTANCE},CARELINK_DB_NAME=carelink,CARELINK_DB_USER=carelink-runtime@${PROJECT_ID}.iam,CARELINK_CLOUD_SQL_IP_TYPE=PUBLIC,MATCH_SERVICE_URL=${_MATCH_SERVICE_URL}
-      - --remove-env-vars=CARELINK_SQLITE_PATH
 
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${BUILD_ID}
