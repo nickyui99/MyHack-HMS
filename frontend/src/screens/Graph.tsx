@@ -65,6 +65,31 @@ const STATE_STYLE: Record<RelationshipState, { stroke: string; dash: string }> =
   blocked:   { stroke: '#e11d48', dash: '2 3' },
 };
 
+/** Quadratic-bezier path between two points, bent perpendicular to the
+ *  straight line by `bend` units. Positive bend curves one way, negative
+ *  the other — pick a deterministic sign per edge so adjacent edges fan
+ *  out instead of overlapping. */
+function edgePath(a: { x: number; y: number }, b: { x: number; y: number }, bend: number) {
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const cx = mx + nx * bend;
+  const cy = my + ny * bend;
+  return { d: `M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`, cx, cy };
+}
+
+function bendFor(id: string, weight: number): number {
+  // String hash → sign, weight → magnitude (heavier edges bow out more).
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i)) | 0;
+  const dir = h % 2 === 0 ? 1 : -1;
+  return dir * (24 + weight * 22);
+}
+
 type DragRef =
   | {
       kind: 'node';
@@ -362,22 +387,28 @@ export default function Graph() {
                   const b = resolvedPos(r.actorB);
                   const s = STATE_STYLE[r.state];
                   const isHover = hoverEdge === r.id;
+                  const { d, cx, cy } = edgePath(a, b, bendFor(r.id, r.weight));
+                  // Bezier midpoint (t=0.5) for the hover label.
+                  const tmx = (a.x + 2 * cx + b.x) / 4;
+                  const tmy = (a.y + 2 * cy + b.y) / 4;
                   return (
                     <g key={r.id}
                        onMouseEnter={() => !isDragging && setHoverEdge(r.id)}
                        onMouseLeave={() => setHoverEdge(null)}
                        className="cursor-pointer">
-                      <line
-                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                      <path
+                        d={d}
+                        fill="none"
                         stroke={s.stroke}
                         strokeWidth={isHover ? 3.5 : 1.2 + r.weight * 2.5}
                         strokeDasharray={s.dash}
+                        strokeLinecap="round"
                         opacity={isHover ? 1 : 0.85}
                       />
                       {isHover && (
                         <text
-                          x={(a.x + b.x) / 2}
-                          y={(a.y + b.y) / 2 - 8}
+                          x={tmx}
+                          y={tmy - 8}
                           textAnchor="middle"
                           className="fill-ink text-[10px] font-medium"
                         >
