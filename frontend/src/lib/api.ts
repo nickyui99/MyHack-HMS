@@ -363,7 +363,7 @@ function scoreForActor(
   // similarity/compliance from the single match summary. Decay total by rank
   // so the ranking is visible in the UI; rank-1 keeps the backend's total.
   const decay = totalCount > 1 ? (rank - 1) * 1.5 : 0;
-  const total = Math.max(0, Math.round(resp.match_score - decay));
+  const total = Math.max(0, Math.min(100, Math.round(resp.match_score - decay)));
   return {
     vectorSimilarity: typeof sb.vector_similarity === 'number' ? sb.vector_similarity : 0,
     ruleCompliance: typeof sb.rule_compliance === 'number' ? sb.rule_compliance : 1,

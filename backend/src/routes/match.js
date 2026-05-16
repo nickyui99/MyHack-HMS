@@ -23,6 +23,8 @@ function relationshipType(matchType) {
   }[matchType];
 }
 
+const clampScore = (n) => Math.max(0, Math.min(100, Number(n) || 0));
+
 async function runMatch(matchType, payload, userEmail) {
   // Demo short-circuit: if a curated match_run already exists for this
   // (case, match_type), reuse it so each patient keeps its hand-picked
@@ -34,7 +36,7 @@ async function runMatch(matchType, payload, userEmail) {
       case_id: payload.case_id,
       recommended_actor_ids: existing.recommended_actor_ids,
       recommended_relationship_ids: existing.recommended_relationship_ids || [],
-      match_score: Number(existing.score_breakdown?.outcome_weight ?? 1) * 80,
+      match_score: clampScore(Number(existing.score_breakdown?.outcome_weight ?? 1) * 80),
       score_breakdown: existing.score_breakdown || {},
       compliance_result: existing.compliance_summary || { status: "passed", passed: true, flags: {}, blocked_reasons: [] },
       explanation: existing.explanation || `${matchType.replace("_", " ")} match from curated demo seed.`
@@ -69,7 +71,7 @@ async function runMatchDemo(matchType, payload, userEmail) {
   const blockedReasons = complianceResults.flatMap((result) => result.blocked_reasons);
   const compliancePassed = blockedReasons.length === 0;
   const totalOutcomeWeight = selected.reduce((sum, actor) => sum + Number(actor.outcome_weight || 1), 0);
-  const matchScore = Number(((totalOutcomeWeight / Math.max(selected.length, 1)) * 80).toFixed(2));
+  const matchScore = clampScore(Number(((totalOutcomeWeight / Math.max(selected.length, 1)) * 80).toFixed(2)));
   const scoreBreakdown = {
     vector_similarity: 0.82,
     rule_compliance: compliancePassed ? 1 : 0,
@@ -231,7 +233,9 @@ async function runMatchAI(matchType, payload, userEmail) {
     const first = Object.values(team)[0];
     return first?.score ?? matchResult.team_score?.team_score ?? 0;
   })();
-  const matchScore = Number((firstCandidateScore * 100).toFixed(2));
+  // AI service can return summed team_score > 1 for surgical_team/allied_health;
+  // clamp so the headline match_score never exceeds 100.
+  const matchScore = clampScore(Number((firstCandidateScore * 100).toFixed(2)));
 
   const scoreBreakdown = flattenScoreBreakdown(matchResult);
 
