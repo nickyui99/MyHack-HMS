@@ -18,7 +18,10 @@
       "PowerShell(docker rm -f carelink-api-test 2>$null)",
       "PowerShell(Start-Sleep -Seconds 6; Write-Output \"--- /health ---\"; try { Invoke-RestMethod http://localhost:8085/health | ConvertTo-Json -Depth 5 } catch { $_.Exception.Message }; Write-Output \"--- LOGS ---\"; docker logs carelink-api-test 2>&1 | Select-Object -Last 25)",
       "Bash(gcloud run *)",
-      "Bash(gcloud config *)"
+      "Bash(gcloud config *)",
+      "Bash(curl -sS -o - -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)",
+      "Bash(gcloud sql *)",
+      "Bash(curl -sS -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)"
     ]
   }
 }
