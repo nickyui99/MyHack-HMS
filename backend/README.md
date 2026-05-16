@@ -2,6 +2,52 @@
 
 Node.js + Express backend for Member 2. It exposes the API contract for actors, cases, relationships, matching, outcomes, and audit logs.
 
+## Project structure
+
+```text
+backend/
+├── Dockerfile                  # Container image for Cloud Run
+├── docker-compose.yml          # Local Postgres + pgvector for dev
+├── package.json                # Express, pg, Cloud SQL connector, scripts
+├── data/                       # Local SQLite file (gitignored)
+├── migrations/                 # Postgres schema + seed SQL
+│   ├── 001_init.sql            # Tables, indexes, pgvector
+│   ├── 002_seed_demo.sql       # 50 demo actors, hero case, relationships
+│   ├── 003_grant_cloudsql_iam_user.sql  # Grants for IAM DB user
+│   └── verify_demo.sql         # Post-seed sanity checks
+├── postman/
+│   └── CareLink.postman_collection.json
+├── scripts/
+│   ├── deploy.ps1              # Cloud Run deploy (staging/prod, pg/sqlite)
+│   ├── smoke.js                # In-memory smoke test
+│   ├── smoke-db.js             # Postgres smoke test
+│   ├── smoke-sqlite.js         # SQLite smoke test
+│   ├── test-endpoints.js       # Hits every endpoint in openapi.json
+│   └── check-cloudsql-state.js # Verifies Cloud SQL connectivity
+└── src/
+    ├── server.js               # Entry point: starts HTTP listener
+    ├── app.js                  # Express app, route wiring, error handling
+    ├── config.js               # Env loading + mode selection (sqlite/pg/memory)
+    ├── openapi.js              # Lightweight OpenAPI document served at /openapi.json
+    ├── db/
+    │   ├── repository.js       # Backend-agnostic data access facade
+    │   ├── store.js            # In-memory demo store
+    │   ├── sqlite.js           # node:sqlite implementation
+    │   └── cloudSql.js         # Postgres / Cloud SQL connector (IAM auth)
+    ├── middleware/
+    │   └── auth.js             # IAP / local-user resolution
+    ├── routes/
+    │   ├── actors.js           # /actors
+    │   ├── cases.js            # /cases
+    │   ├── relationships.js    # /relationships
+    │   ├── match.js            # /match/*
+    │   ├── outcomes.js         # /outcomes
+    │   └── audit.js            # /audit
+    └── services/
+        ├── compliance.js       # APC expiry, panel, capacity checks
+        └── audit.js            # Audit log writes
+```
+
 ## Local run
 
 ```powershell
@@ -306,34 +352,69 @@ Your Google user also needs `roles/iam.serviceAccountTokenCreator` on the runtim
 
 The IAM database service account must also have table privileges. Run `migrations/003_grant_cloudsql_iam_user.sql` once as the database owner or a privileged PostgreSQL user.
 
-## Cloud Run SQLite prototype
+## Deploy to Cloud Run
 
-The prototype API is deployed to Cloud Run with SQLite enabled at:
+Use the helper script at [backend/scripts/deploy.ps1](backend/scripts/deploy.ps1). It builds the container with Cloud Build, pushes it to Artifact Registry (`carelink-images/carelink-api`), and deploys to Cloud Run with the right service account, env vars, and Cloud SQL attachment.
+
+Prereqs (one-time per machine):
+
+```powershell
+cmd /c gcloud auth login
+cmd /c gcloud config set project hackathon-myhack
+```
+
+### Staging (default, recommended)
+
+Deploy to `carelink-api-staging` with Postgres / Cloud SQL:
+
+```powershell
+cd backend
+.\scripts\deploy.ps1
+```
+
+When prompted, press Enter to accept the default (`[1] carelink-api-staging`). The script builds an image tagged `staging-<timestamp>`, deploys it, prints the service URL, and runs a `/health` smoke check.
+
+### Production
+
+```powershell
+cd backend
+.\scripts\deploy.ps1 -Service carelink-api
+```
+
+You will be required to type `deploy prod` to confirm. Production URL:
 
 ```txt
 https://carelink-api-305487732751.asia-southeast1.run.app
 ```
 
-Deploy from the repository root:
+### Useful flags
 
-```powershell
-cmd /c gcloud builds submit --project hackathon-myhack --config infra\cloudbuild.yaml .
-```
+| Flag | Purpose |
+|---|---|
+| `-DbBackend sqlite` | Deploy in SQLite prototype mode (no Cloud SQL attached, data resets on restart). |
+| `-DbBackend postgres` | Default. Attaches Cloud SQL `hackathon-myhack:asia-southeast1:postgres` and sets IAM DB user. |
+| `-SkipBuild -ExistingTag <tag>` | Re-deploy an already-built image tag without rebuilding. |
+| `-Region`, `-Project`, `-ServiceAccount` | Override defaults if deploying elsewhere. |
 
-The Cloud Run deployment sets:
+### What the script sets
+
+Postgres mode (default) sets these env vars on the service:
 
 ```txt
 CARELINK_ENVIRONMENT=cloud
 CARELINK_IAP_REQUIRED=false
-CARELINK_SQLITE_PATH=/tmp/carelink.sqlite
+CARELINK_CLOUD_SQL_INSTANCE=hackathon-myhack:asia-southeast1:postgres
+CARELINK_DB_NAME=carelink
+CARELINK_DB_USER=carelink-runtime@hackathon-myhack.iam
+CARELINK_CLOUD_SQL_IP_TYPE=PUBLIC
 ```
 
-This is intentionally prototype-only. The SQLite file lives on the Cloud Run instance filesystem, so data can reset when the instance restarts or a new revision is deployed. The deployment also caps the service at one instance to avoid each instance having a different local SQLite database.
+SQLite mode (`-DbBackend sqlite`) sets `CARELINK_SQLITE_PATH=/tmp/carelink.sqlite` and clears Cloud SQL attachments. SQLite is prototype-only — the file lives on the instance filesystem and resets on revision deploys or instance restarts, so the service is capped at `--max-instances=1`.
 
-Verify the deployed API:
+### Verify a deployment
 
 ```powershell
-$env:CARELINK_TEST_BASE_URL="https://carelink-api-305487732751.asia-southeast1.run.app"
+$env:CARELINK_TEST_BASE_URL="https://carelink-api-staging-305487732751.asia-southeast1.run.app"
 cmd /c npm run test:endpoints
 ```
 

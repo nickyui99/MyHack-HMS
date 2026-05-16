@@ -21,7 +21,10 @@
       "Bash(gcloud config *)",
       "Bash(curl -sS -o - -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)",
       "Bash(gcloud sql *)",
-      "Bash(curl -sS -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)"
+      "Bash(curl -sS -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)",
+      "Bash(git -C backend ls-files)",
+      "Bash(git -C backend ls-files data/)",
+      "Bash(git -C . status --short backend/)"
     ]
   }
 }
