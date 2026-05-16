@@ -7,7 +7,7 @@ export function currentUser(req, res, next) {
     return next();
   }
 
-  if (config.environment === "local" && !config.iapRequired) {
+  if (!config.iapRequired) {
     req.userEmail = req.header("x-carelink-local-user") || config.localUserEmail;
     return next();
   }

@@ -1,34 +1,39 @@
 import { Router } from "express";
 
-import { store } from "../db/store.js";
+import { completeRelationships, getRelationship } from "../db/repository.js";
 import { currentUser } from "../middleware/auth.js";
 import { writeAudit } from "../services/audit.js";
 
 export const outcomesRouter = Router();
 
-outcomesRouter.post("/", currentUser, (req, res) => {
-  const updated = [];
-  for (const relationshipId of req.body.relationship_ids || []) {
-    const relationship = store.relationships.get(relationshipId);
-    if (!relationship) return res.status(404).json({ detail: `Relationship ${relationshipId} not found` });
+outcomesRouter.post("/", currentUser, async (req, res, next) => {
+  try {
+    const relationshipIds = req.body.relationship_ids || [];
+    const previousById = new Map();
+    for (const relationshipId of relationshipIds) {
+      const relationship = await getRelationship(relationshipId);
+      if (!relationship) return res.status(404).json({ detail: `Relationship ${relationshipId} not found` });
+      previousById.set(relationshipId, relationship);
+    }
 
-    const previousState = relationship.state;
-    relationship.outcome_record = req.body.outcome_record || {};
-    relationship.state = "completed";
-    relationship.updated_at = new Date().toISOString();
-    store.relationships.set(relationship.id, relationship);
-    updated.push(relationship);
+    const updated = await completeRelationships(relationshipIds, req.body.outcome_record);
 
-    writeAudit({
-      action: "outcome_logged",
-      actorUser: req.userEmail,
-      relationshipId: relationship.id,
-      caseId: relationship.case_id,
-      previousState,
-      nextState: "completed",
-      reason: req.body.reason,
-      metadata: relationship.outcome_record
-    });
+    for (const relationship of updated) {
+      const previous = previousById.get(relationship.id);
+      await writeAudit({
+        action: "outcome_logged",
+        actorUser: req.userEmail,
+        relationshipId: relationship.id,
+        caseId: relationship.case_id,
+        previousState: previous.state,
+        nextState: "completed",
+        reason: req.body.reason,
+        metadata: relationship.outcome_record
+      });
+    }
+
+    return res.json(updated);
+  } catch (error) {
+    next(error);
   }
-  return res.json(updated);
 });

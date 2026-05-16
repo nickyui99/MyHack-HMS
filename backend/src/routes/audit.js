@@ -1,17 +1,14 @@
 import { Router } from "express";
 
-import { store } from "../db/store.js";
+import { listAuditLogs } from "../db/repository.js";
 
 export const auditRouter = Router();
 
-auditRouter.get("/", (req, res) => {
-  let logs = [...store.auditLogs.values()];
-  if (req.query.relationship_id) {
-    logs = logs.filter((log) => log.relationship_id === req.query.relationship_id);
+auditRouter.get("/", async (req, res, next) => {
+  try {
+    const logs = await listAuditLogs(req.query);
+    return res.json(logs);
+  } catch (error) {
+    next(error);
   }
-  if (req.query.case_id) {
-    logs = logs.filter((log) => log.case_id === req.query.case_id);
-  }
-  logs.sort((a, b) => a.created_at.localeCompare(b.created_at));
-  return res.json(logs);
 });

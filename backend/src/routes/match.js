@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createRecord, store } from "../db/store.js";
+import { createMatchRun, getCase, listActors } from "../db/repository.js";
 import { currentUser } from "../middleware/auth.js";
 import { evaluateActor } from "../services/compliance.js";
 import { createRelationship } from "./relationships.js";
@@ -21,15 +21,16 @@ function relationshipType(matchType) {
   }[matchType];
 }
 
-function runMatch(matchType, payload, userEmail) {
-  if (!store.cases.has(payload.case_id)) {
+async function runMatch(matchType, payload, userEmail) {
+  const careCase = await getCase(payload.case_id);
+  if (!careCase) {
     const error = new Error("Case not found");
     error.statusCode = 404;
     throw error;
   }
 
   const roles = candidateRoles(matchType);
-  const selected = [...store.actors.values()]
+  const selected = (await listActors())
     .filter((actor) => roles.has(actor.role))
     .sort((a, b) => Number(b.outcome_weight || 1) - Number(a.outcome_weight || 1))
     .slice(0, matchType === "surgical_team" ? 4 : 3);
@@ -49,7 +50,7 @@ function runMatch(matchType, payload, userEmail) {
   const relationshipIds = [];
   if (payload.create_relationships && payload.requested_by_actor_id) {
     for (const actor of selected) {
-      const relationship = createRelationship(
+      const relationship = await createRelationship(
         {
           case_id: payload.case_id,
           relationship_type: relationshipType(matchType),
@@ -81,7 +82,7 @@ function runMatch(matchType, payload, userEmail) {
     explanation: `${matchType.replace("_", " ")} match generated from seeded CareLink actors.`
   };
 
-  const matchRun = createRecord({
+  await createMatchRun({
     case_id: payload.case_id,
     match_type: matchType,
     input_context: payload.context || {},
@@ -89,10 +90,8 @@ function runMatch(matchType, payload, userEmail) {
     recommended_relationship_ids: relationshipIds,
     score_breakdown: scoreBreakdown,
     compliance_summary: response.compliance_result,
-    explanation: response.explanation,
-    created_by: userEmail
-  });
-  store.matchRuns.set(matchRun.id, matchRun);
+    explanation: response.explanation
+  }, userEmail);
 
   return response;
 }
@@ -102,11 +101,12 @@ for (const [path, matchType] of [
   ["/surgical-team", "surgical_team"],
   ["/allied-health", "allied_health"]
 ]) {
-  matchRouter.post(path, currentUser, (req, res) => {
+  matchRouter.post(path, currentUser, async (req, res, next) => {
     try {
-      return res.json(runMatch(matchType, req.body, req.userEmail));
+      return res.json(await runMatch(matchType, req.body, req.userEmail));
     } catch (error) {
-      return res.status(error.statusCode || 500).json({ detail: error.message });
+      if (error.statusCode) return res.status(error.statusCode).json({ detail: error.message });
+      return next(error);
     }
   });
 }

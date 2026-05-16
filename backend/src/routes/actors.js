@@ -1,40 +1,34 @@
 import { Router } from "express";
 
-import { createRecord, store } from "../db/store.js";
+import { createActor, getActor, listActors } from "../db/repository.js";
 import { currentUser } from "../middleware/auth.js";
 
 export const actorsRouter = Router();
 
-actorsRouter.get("/", (req, res) => {
-  let actors = [...store.actors.values()];
-  const { role, specialty, available, hospital } = req.query;
-
-  if (role) actors = actors.filter((actor) => actor.role === role);
-  if (specialty) actors = actors.filter((actor) => actor.specialty === specialty);
-  if (hospital) actors = actors.filter((actor) => actor.hospital === hospital);
-  if (available !== undefined) {
-    const allowed = available === "true" ? ["available", "limited"] : ["unavailable", "full"];
-    actors = actors.filter((actor) => allowed.includes(String(actor.capacity_status).toLowerCase()));
+actorsRouter.get("/", async (req, res, next) => {
+  try {
+    const actors = await listActors(req.query);
+    res.json(actors);
+  } catch (error) {
+    next(error);
   }
-
-  res.json(actors);
 });
 
-actorsRouter.get("/:actorId", (req, res) => {
-  const actor = store.actors.get(req.params.actorId);
-  if (!actor) return res.status(404).json({ detail: "Actor not found" });
-  return res.json(actor);
+actorsRouter.get("/:actorId", async (req, res, next) => {
+  try {
+    const actor = await getActor(req.params.actorId);
+    if (!actor) return res.status(404).json({ detail: "Actor not found" });
+    return res.json(actor);
+  } catch (error) {
+    next(error);
+  }
 });
 
-actorsRouter.post("/", currentUser, (req, res) => {
-  const actor = createRecord({
-    insurance_panels: [],
-    languages: [],
-    credentials: {},
-    capacity_status: "available",
-    outcome_weight: 1,
-    ...req.body
-  });
-  store.actors.set(actor.id, actor);
-  return res.status(201).json(actor);
+actorsRouter.post("/", currentUser, async (req, res, next) => {
+  try {
+    const actor = await createActor(req.body);
+    return res.status(201).json(actor);
+  } catch (error) {
+    next(error);
+  }
 });

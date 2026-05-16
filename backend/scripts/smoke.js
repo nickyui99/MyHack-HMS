@@ -1,4 +1,6 @@
-import { app } from "../src/app.js";
+process.env.CARELINK_SKIP_ENV_FILE = "true";
+
+const { app } = await import("../src/app.js");
 
 const server = app.listen(0, async () => {
   const { port } = server.address();

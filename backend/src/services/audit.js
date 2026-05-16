@@ -1,6 +1,6 @@
-import { createRecord, store } from "../db/store.js";
+import { createAuditLog } from "../db/repository.js";
 
-export function writeAudit({
+export async function writeAudit({
   action,
   actorUser,
   relationshipId = null,
@@ -10,7 +10,7 @@ export function writeAudit({
   reason = null,
   metadata = {}
 }) {
-  const log = createRecord({
+  return createAuditLog({
     relationship_id: relationshipId,
     case_id: caseId,
     action,
@@ -20,6 +20,4 @@ export function writeAudit({
     reason,
     metadata
   });
-  store.auditLogs.set(log.id, log);
-  return log;
 }

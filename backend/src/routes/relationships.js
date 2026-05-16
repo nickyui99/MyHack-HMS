@@ -1,27 +1,36 @@
 import { Router } from "express";
 
-import { createRecord, store } from "../db/store.js";
+import {
+  createRelationshipRecord,
+  getActor,
+  getCase,
+  getRelationship,
+  listRelationships,
+  updateRelationshipState
+} from "../db/repository.js";
 import { currentUser } from "../middleware/auth.js";
 import { evaluateActor } from "../services/compliance.js";
 import { writeAudit } from "../services/audit.js";
 
 export const relationshipsRouter = Router();
 
-export function createRelationship(payload, userEmail) {
-  if (!store.cases.has(payload.case_id)) {
+export async function createRelationship(payload, userEmail) {
+  const careCase = await getCase(payload.case_id);
+  if (!careCase) {
     const error = new Error("Case not found");
     error.statusCode = 404;
     throw error;
   }
-  if (!store.actors.has(payload.actor_a_id) || !store.actors.has(payload.actor_b_id)) {
+  const sourceActor = await getActor(payload.actor_a_id);
+  const targetActor = await getActor(payload.actor_b_id);
+  if (!sourceActor || !targetActor) {
     const error = new Error("Actor not found");
     error.statusCode = 404;
     throw error;
   }
 
-  const targetActor = store.actors.get(payload.actor_b_id);
   const compliance = evaluateActor(targetActor);
-  const relationship = createRecord({
+  const relationship = await createRelationshipRecord({
     ...payload,
     state: compliance.passed ? "proposed" : "compliance_blocked",
     compliance_status: compliance.status,
@@ -29,10 +38,9 @@ export function createRelationship(payload, userEmail) {
     outcome_record: null,
     created_by: userEmail,
     approved_by: null
-  });
-  store.relationships.set(relationship.id, relationship);
+  }, userEmail);
 
-  writeAudit({
+  await writeAudit({
     action: "relationship_created",
     actorUser: userEmail,
     relationshipId: relationship.id,
@@ -42,7 +50,7 @@ export function createRelationship(payload, userEmail) {
   });
 
   if (!compliance.passed) {
-    writeAudit({
+    await writeAudit({
       action: "compliance_blocked",
       actorUser: userEmail,
       relationshipId: relationship.id,
@@ -55,45 +63,45 @@ export function createRelationship(payload, userEmail) {
   return relationship;
 }
 
-relationshipsRouter.get("/", (req, res) => {
-  let relationships = [...store.relationships.values()];
-  if (req.query.case_id) {
-    relationships = relationships.filter((rel) => rel.case_id === req.query.case_id);
+relationshipsRouter.get("/", async (req, res, next) => {
+  try {
+    const relationships = await listRelationships(req.query);
+    res.json(relationships);
+  } catch (error) {
+    next(error);
   }
-  if (req.query.state) {
-    relationships = relationships.filter((rel) => rel.state === req.query.state);
-  }
-  res.json(relationships);
 });
 
-relationshipsRouter.post("/", currentUser, (req, res) => {
+relationshipsRouter.post("/", currentUser, async (req, res, next) => {
   try {
-    const relationship = createRelationship(req.body, req.userEmail);
+    const relationship = await createRelationship(req.body, req.userEmail);
     return res.status(201).json(relationship);
   } catch (error) {
-    return res.status(error.statusCode || 500).json({ detail: error.message });
+    if (error.statusCode) return res.status(error.statusCode).json({ detail: error.message });
+    return next(error);
   }
 });
 
-relationshipsRouter.patch("/:relationshipId/state", currentUser, (req, res) => {
-  const relationship = store.relationships.get(req.params.relationshipId);
-  if (!relationship) return res.status(404).json({ detail: "Relationship not found" });
+relationshipsRouter.patch("/:relationshipId/state", currentUser, async (req, res, next) => {
+  try {
+    const previousRelationship = await getRelationship(req.params.relationshipId);
+    if (!previousRelationship) return res.status(404).json({ detail: "Relationship not found" });
 
-  const previousState = relationship.state;
-  relationship.state = req.body.state;
-  relationship.updated_at = new Date().toISOString();
-  if (["approved", "active"].includes(req.body.state)) relationship.approved_by = req.userEmail;
-  store.relationships.set(relationship.id, relationship);
+    const previousState = previousRelationship.state;
+    const relationship = await updateRelationshipState(req.params.relationshipId, req.body.state, req.userEmail);
 
-  writeAudit({
-    action: "state_changed",
-    actorUser: req.userEmail,
-    relationshipId: relationship.id,
-    caseId: relationship.case_id,
-    previousState,
-    nextState: req.body.state,
-    reason: req.body.reason
-  });
+    await writeAudit({
+      action: "state_changed",
+      actorUser: req.userEmail,
+      relationshipId: relationship.id,
+      caseId: relationship.case_id,
+      previousState,
+      nextState: req.body.state,
+      reason: req.body.reason
+    });
 
-  return res.json(relationship);
+    return res.json(relationship);
+  } catch (error) {
+    next(error);
+  }
 });

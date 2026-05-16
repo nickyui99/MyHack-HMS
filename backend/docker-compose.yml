@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: carelink-postgres
+    environment:
+      POSTGRES_DB: carelink
+      POSTGRES_USER: carelink
+      POSTGRES_PASSWORD: carelink
+    ports:
+      - "5432:5432"
+    volumes:
+      - carelink-postgres-data:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carelink -d carelink"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  carelink-postgres-data:

@@ -1,5 +1,6 @@
 # Node dependencies
 node_modules/
+backend/backend-dev.log
 
 # Environment and local config
 .env
