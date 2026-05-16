@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type { StageDef } from '@/lib/stages';
 import StageIcon from './StageIcon';
-import { activeCase } from '@/data/cases';
 
 interface Props {
   stage: StageDef;
@@ -34,7 +33,10 @@ export default function StageHero({ stage, signals, cta }: Props) {
               {stage.number}
             </span>
             <div className="leading-tight">
-              <div className="eyebrow" style={{ color: 'var(--stage-deep)' }}>
+              <div
+                className="display text-base font-semibold tracking-tight"
+                style={{ color: 'var(--stage-deep)' }}
+              >
                 {stage.family === 'Network' ? 'Network View' : `Stage ${stage.number}`} · CareLink
               </div>
               <h1 className="display text-[34px] font-semibold leading-[1.05] tracking-tighter text-ink">
@@ -88,30 +90,6 @@ export default function StageHero({ stage, signals, cta }: Props) {
         </div>
       </div>
 
-      {/* Active-case strip */}
-      <div
-        className="relative flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-8 py-3 text-[12px]"
-        style={{
-          background: 'color-mix(in oklab, var(--stage-soft) 60%, white)',
-          borderColor: 'color-mix(in oklab, var(--stage-deep) 14%, transparent)',
-        }}
-      >
-        <span className="eyebrow" style={{ color: 'var(--stage-deep)' }}>
-          Active case
-        </span>
-        <span className="display text-sm font-medium text-ink">
-          {activeCase.patientName}
-        </span>
-        <span className="text-ink-subtle">·</span>
-        <span className="text-ink-muted">
-          {activeCase.age}{activeCase.sex} · {activeCase.diagnosis}
-        </span>
-        <span className="ml-auto flex flex-wrap gap-1.5">
-          <span className="chip chip-coral">● {activeCase.acuity}</span>
-          <span className="chip">Panel · {activeCase.panel}</span>
-          <span className="chip">Region · {activeCase.region}</span>
-        </span>
-      </div>
     </section>
   );
 }

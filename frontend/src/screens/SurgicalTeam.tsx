@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import StageHero from '@/components/StageHero';
 import CandidateCard from '@/components/CandidateCard';
 import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
+import Disclosure from '@/components/Disclosure';
 import { runSurgicalMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
-import { activeCase } from '@/data/cases';
+import { useActiveCase } from '@/lib/activeCase';
 import type { MatchCandidate, SurgicalRole } from '@/lib/types';
 import { initials } from '@/lib/format';
 import { stages } from '@/lib/stages';
@@ -12,8 +13,9 @@ import { stages } from '@/lib/stages';
 const ROLES: SurgicalRole[] = ['Lead Surgeon', 'Anaesthetist', 'Perfusionist', 'Scrub Nurse'];
 
 export default function SurgicalTeam() {
-  const fetcher = useCallback(() => runSurgicalMatch(activeCase.id), []);
-  const { data, loading, error, refetch } = useApi(fetcher, []);
+  const { active } = useActiveCase();
+  const fetcher = useCallback(() => runSurgicalMatch(active.id), [active.id]);
+  const { data, loading, error, refetch } = useApi(fetcher, [active.id]);
   const byRole = data?.data;
   const source = data?.source;
 
@@ -66,31 +68,35 @@ export default function SurgicalTeam() {
       />
 
       {/* OT briefing strip */}
-      <div
-        className="relative mb-6 grid grid-cols-1 gap-3 overflow-hidden rounded-3xl border p-4 shadow-soft sm:grid-cols-4"
-        style={{
-          borderColor: 'color-mix(in oklab, var(--stage-deep) 18%, transparent)',
-          background: 'color-mix(in oklab, var(--stage-soft) 55%, white)',
-        }}
-      >
-        <BriefingTile label="Procedure" value="CABG ×3" sub="Off-pump, sternotomy" />
-        <BriefingTile label="OT slot" value="07:00 — 12:00" sub="IJN · OT-3" />
-        <BriefingTile label="Team status" value={`${completeness}/4 roles`}
-          sub={completeness === 4 ? 'Ready to confirm' : 'Awaiting assignment'} />
-        <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-soft" style={{ background: `linear-gradient(135deg, ${stages.surgical.colors.deep}, ${stages.surgical.colors.ink})` }}>
-          <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl" />
-          <div className="relative">
-            <div className="section-label text-white/60">Combination score</div>
-            <div className="display mt-1 flex items-baseline gap-2 leading-none">
-              <span className="text-4xl font-semibold tabular">{teamScore}</span>
-              <span className="text-white/55 text-xs">/ 100</span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {pairBonus && <span className="chip border-white/20 bg-white/15 text-white">pair bonus</span>}
-              <span className="chip border-white/20 bg-white/15 text-white">{ROLES.length} roles</span>
+      <div className="mb-6">
+        <Disclosure size="lg" label="OT briefing" hint="Procedure · slot · score">
+          <div
+            className="relative grid grid-cols-1 gap-3 overflow-hidden rounded-2xl border p-4 sm:grid-cols-4"
+            style={{
+              borderColor: 'color-mix(in oklab, var(--stage-deep) 18%, transparent)',
+              background: 'color-mix(in oklab, var(--stage-soft) 55%, white)',
+            }}
+          >
+            <BriefingTile label="Procedure" value="CABG ×3" sub="Off-pump, sternotomy" />
+            <BriefingTile label="OT slot" value="07:00 — 12:00" sub="IJN · OT-3" />
+            <BriefingTile label="Team status" value={`${completeness}/4 roles`}
+              sub={completeness === 4 ? 'Ready to confirm' : 'Awaiting assignment'} />
+            <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-soft" style={{ background: `linear-gradient(135deg, ${stages.surgical.colors.deep}, ${stages.surgical.colors.ink})` }}>
+              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl" />
+              <div className="relative">
+                <div className="section-label text-white/60">Combination score</div>
+                <div className="display mt-1 flex items-baseline gap-2 leading-none">
+                  <span className="text-4xl font-semibold tabular">{teamScore}</span>
+                  <span className="text-white/55 text-xs">/ 100</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {pairBonus && <span className="chip border-white/20 bg-white/15 text-white">pair bonus</span>}
+                  <span className="chip border-white/20 bg-white/15 text-white">{ROLES.length} roles</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </Disclosure>
       </div>
 
       {/* 4-column command center */}

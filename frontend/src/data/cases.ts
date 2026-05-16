@@ -1,7 +1,8 @@
 import type { PatientCase } from '@/lib/types';
 
-// `id` must match a real backend case so /match/* succeeds.
-// '10000000-0000-4000-8000-000000000001' is Encik Zainal in the seeded SQLite DB.
+// IDs must match real backend cases so /match/* succeeds. The first two
+// match seeded rows in `backend/data/carelink.sqlite` (Encik Zainal and
+// Puan Mariam). The third is illustrative for the demo dropdown.
 export const cases: PatientCase[] = [
   {
     id: '10000000-0000-4000-8000-000000000001',
@@ -16,16 +17,19 @@ export const cases: PatientCase[] = [
       'Referring GP: Dr Amirul Hakim. Chest pain on exertion x3 days. Troponin elevated. ECG: lateral T-wave inversion.',
   },
   {
-    id: 'case-siti',
-    patientName: 'Puan Siti Aminah',
-    age: 64,
+    id: '10000000-0000-4000-8000-000000000002',
+    patientName: 'Puan Mariam',
+    age: 66,
     sex: 'F',
-    diagnosis: 'Severe aortic stenosis',
+    diagnosis: 'Heart failure exacerbation',
     panel: 'AIA',
-    region: 'Petaling Jaya',
+    region: 'Subang Jaya',
     acuity: 'Routine',
-    notes: 'Referred for valve replacement workup.',
+    notes: 'Preferred language Malay. Referred for cardiology workup.',
   },
 ];
 
+// Static default — kept for back-compat with files that read this directly.
+// New code should use `useActiveCase()` from `@/lib/activeCase` instead so
+// the patient picker in the TopBar can swap cases at runtime.
 export const activeCase = cases[0];

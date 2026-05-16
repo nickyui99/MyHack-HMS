@@ -3,29 +3,45 @@ import StageHero from '@/components/StageHero';
 import CandidateCard from '@/components/CandidateCard';
 import FilterBar from '@/components/FilterBar';
 import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
-import { runReferralMatch } from '@/data/source';
+import Disclosure from '@/components/Disclosure';
+import { loadActors, runReferralMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
-import { activeCase } from '@/data/cases';
+import { useActiveCase } from '@/lib/activeCase';
 import { stages } from '@/lib/stages';
+import type { Actor } from '@/lib/types';
+import { initials, nullable } from '@/lib/format';
 
 export default function Referral() {
+  const { active } = useActiveCase();
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [panelFilter, setPanelFilter] = useState('All panels');
   const [region, setRegion] = useState('All regions');
 
-  const fetcher = useCallback(() => runReferralMatch(activeCase.id), []);
-  const { data, loading, error, refetch } = useApi(fetcher, []);
+  // Re-fetch when the user switches patients in the TopBar dropdown.
+  const fetcher = useCallback(() => runReferralMatch(active.id), [active.id]);
+  const { data, loading, error, refetch } = useApi(fetcher, [active.id]);
+
+  // Manual picker — list every cardiologist in the backend so the user can
+  // override the auto-recommendation if they have someone in mind.
+  const actorFetcher = useCallback(
+    () => loadActors({ type: 'Cardiologist' }),
+    [],
+  );
+  const actorsApi = useApi(actorFetcher, []);
+  const allCardiologists = actorsApi.data?.data ?? [];
 
   const candidates = data?.data ?? [];
   const source = data?.source;
 
-  // Default the selection to the top candidate when data first arrives.
+  // Reset selection whenever a new match run comes back.
   useEffect(() => {
-    if (selected === null && candidates.length > 0) {
+    if (candidates.length > 0) {
       setSelected(candidates[0].actor.id);
+    } else {
+      setSelected(null);
     }
-  }, [candidates, selected]);
+  }, [candidates]);
 
   const visible = useMemo(() => {
     return candidates.filter((c) => {
@@ -41,6 +57,10 @@ export default function Referral() {
 
   const featured = visible[0];
   const alternates = visible.slice(1);
+
+  // Anyone not in the auto-recommended list — surfaced in the manual picker.
+  const recommendedIds = new Set(candidates.map((c) => c.actor.id));
+  const otherCardiologists = allCardiologists.filter((a) => !recommendedIds.has(a.id));
 
   return (
     <>
@@ -78,24 +98,64 @@ export default function Referral() {
           )}
 
           {!loading && !error && alternates.length > 0 && (
-            <>
-              <div className="mb-3 mt-7 flex items-baseline justify-between">
-                <h3 className="display text-base font-medium text-ink">Alternates · ranked</h3>
-                <span className="text-[11px] text-ink-subtle">{alternates.length} more</span>
-              </div>
+            <div className="mt-5">
+              <Disclosure
+                size="lg"
+                label="See other recommended cardiologists"
+                hint={`${alternates.length} ranked`}
+              >
+                <div className="space-y-3">
+                  {alternates.map((c, i) => (
+                    <CandidateCard
+                      key={c.actor.id}
+                      candidate={c}
+                      rank={i + 2}
+                      selected={selected === c.actor.id}
+                      onSelect={() => setSelected(c.actor.id)}
+                    />
+                  ))}
+                </div>
+              </Disclosure>
+            </div>
+          )}
 
-              <div className="space-y-3">
-                {alternates.map((c, i) => (
-                  <CandidateCard
-                    key={c.actor.id}
-                    candidate={c}
-                    rank={i + 2}
-                    selected={selected === c.actor.id}
-                    onSelect={() => setSelected(c.actor.id)}
-                  />
-                ))}
-              </div>
-            </>
+          {!loading && !error && (
+            <div className="mt-3">
+              <Disclosure
+                size="lg"
+                label="Pick manually · choose a cardiologist yourself"
+                hint={allCardiologists.length ? `${allCardiologists.length} in directory` : undefined}
+              >
+                {actorsApi.loading && <div className="text-[12px] text-ink-subtle">Loading…</div>}
+                {actorsApi.error && (
+                  <div className="text-[12px] text-rose-700">
+                    Couldn't load cardiologist list.
+                  </div>
+                )}
+                {!actorsApi.loading && !actorsApi.error && (
+                  <>
+                    {recommendedIds.size > 0 && (
+                      <p className="mb-3 text-[12px] text-ink-muted">
+                        Pick any cardiologist, including ones not auto-recommended.
+                      </p>
+                    )}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {otherCardiologists.length === 0 && allCardiologists.length === 0 && (
+                        <div className="text-[12px] text-ink-subtle">No cardiologists in directory.</div>
+                      )}
+                      {otherCardiologists.map((a) => (
+                        <ManualPickRow
+                          key={a.id}
+                          actor={a}
+                          selected={selected === a.id}
+                          onSelect={() => setSelected(a.id)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </Disclosure>
+            </div>
           )}
         </div>
 
@@ -115,11 +175,48 @@ export default function Referral() {
             </div>
           </div>
 
-          <ReasoningCard />
-          <PipelineCard />
+          <Disclosure label="Why this ranking">
+            <ReasoningCard />
+          </Disclosure>
+          <Disclosure label="Pipeline · last run">
+            <PipelineCard />
+          </Disclosure>
         </aside>
       </div>
     </>
+  );
+}
+
+function ManualPickRow({
+  actor, selected, onSelect,
+}: {
+  actor: Actor;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={[
+        'flex items-center gap-3 rounded-xl border bg-paper px-3 py-2 text-left transition',
+        selected
+          ? 'border-teal-400 ring-2 ring-teal-200/70'
+          : 'border-line hover:bg-cream/50',
+      ].join(' ')}
+    >
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-teal-100 to-teal-200 text-[11px] font-semibold text-teal-800">
+        {initials(actor.name)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[13px] font-medium text-ink">{actor.name}</div>
+        <div className="truncate text-[11px] text-ink-subtle">
+          {nullable(actor.hospital)}
+        </div>
+      </div>
+      <span className="text-[11px] text-ink-muted">
+        {selected ? 'Selected' : 'Pick'}
+      </span>
+    </button>
   );
 }
 

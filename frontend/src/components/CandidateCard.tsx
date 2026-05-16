@@ -2,6 +2,7 @@ import type { MatchCandidate } from '@/lib/types';
 import { dateShort, initials, isApcExpiring, nullable, score100 } from '@/lib/format';
 import ScoreBreakdown from './ScoreBreakdown';
 import ComplianceBadge from './ComplianceBadge';
+import Disclosure from './Disclosure';
 
 interface Props {
   candidate: MatchCandidate;
@@ -72,18 +73,22 @@ function RowCard({
           {nullable(actor.hospital)} · {nullable(actor.department)}
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          <span className="chip chip-butter">
-            {nullable(actor.outcomeScore, (n) => `${n.toFixed(1)} / 5`)}
-          </span>
-          <span className="chip">{nullable(actor.caseCount, (n) => `${n} cases`)}</span>
-          <span className="chip">{nullable(actor.capacityPct, (n) => `${n}% load`)}</span>
-          <span className={`chip ${expiring ? 'chip-warn' : ''}`}>
-            APC {dateShort(actor.apcExpiry)}
-          </span>
-          {score.historicalPairBonus && score.historicalPairBonus > 0 && (
-            <span className="chip chip-coral">Historical pair</span>
-          )}
+        <div className="mt-2.5">
+          <Disclosure label="Profile details">
+            <div className="flex flex-wrap gap-1.5">
+              <span className="chip chip-butter">
+                {nullable(actor.outcomeScore, (n) => `${n.toFixed(1)} / 5`)}
+              </span>
+              <span className="chip">{nullable(actor.caseCount, (n) => `${n} cases`)}</span>
+              <span className="chip">{nullable(actor.capacityPct, (n) => `${n}% load`)}</span>
+              <span className={`chip ${expiring ? 'chip-warn' : ''}`}>
+                APC {dateShort(actor.apcExpiry)}
+              </span>
+              {score.historicalPairBonus && score.historicalPairBonus > 0 && (
+                <span className="chip chip-coral">Historical pair</span>
+              )}
+            </div>
+          </Disclosure>
         </div>
 
         <p className="mt-3 max-w-[58ch] text-[13.5px] leading-relaxed text-ink-muted">

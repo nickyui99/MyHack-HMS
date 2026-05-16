@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import StageHero from '@/components/StageHero';
 import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
+import Disclosure from '@/components/Disclosure';
 import { runAlliedMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
 import { stages } from '@/lib/stages';
 import { initials } from '@/lib/format';
-import { activeCase } from '@/data/cases';
+import { useActiveCase } from '@/lib/activeCase';
 import ComplianceBadge from '@/components/ComplianceBadge';
 import type { MatchCandidate } from '@/lib/types';
 
@@ -24,8 +25,9 @@ const SERVICE_SLOTS = [
 ] as const;
 
 export default function AlliedHealth() {
-  const fetcher = useCallback(() => runAlliedMatch(activeCase.id), []);
-  const { data, loading, error, refetch } = useApi(fetcher, []);
+  const { active } = useActiveCase();
+  const fetcher = useCallback(() => runAlliedMatch(active.id), [active.id]);
+  const { data, loading, error, refetch } = useApi(fetcher, [active.id]);
   const candidates = data?.data ?? [];
   const source = data?.source;
 
@@ -48,7 +50,9 @@ export default function AlliedHealth() {
         signals={['3 / 3 services', '8-week recovery', 'Target outcome 4.7 / 5']}
       />
 
-      <section className="paper paper-hover relative mb-7 overflow-hidden p-6">
+      <div className="mb-7">
+      <Disclosure size="lg" label="Recovery journey" hint="8-week timeline">
+      <section className="paper paper-hover relative overflow-hidden p-6">
         <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full blur-3xl" style={{ background: 'var(--stage-soft)', opacity: 0.6 }} />
         <div aria-hidden className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full blur-3xl" style={{ background: 'var(--stage-mid)', opacity: 0.18 }} />
         <div className="relative">
@@ -96,6 +100,8 @@ export default function AlliedHealth() {
           </div>
         </div>
       </section>
+      </Disclosure>
+      </div>
 
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="display text-xl font-medium tracking-tightish text-ink">

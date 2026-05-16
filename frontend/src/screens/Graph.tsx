@@ -6,7 +6,7 @@ import { useApi } from '@/lib/useApi';
 import type { Actor, ActorType, Relationship, RelationshipState, RelationshipType } from '@/lib/types';
 import { dateShort, initials } from '@/lib/format';
 import { stages } from '@/lib/stages';
-import { activeCase } from '@/data/cases';
+import { useActiveCase } from '@/lib/activeCase';
 
 const DEPTS = ['All', 'Cardiology', 'Cardiothoracic Surgery', 'Anaesthesia',
   'Operating Theatre', 'Rehabilitation', 'Nutrition', 'Pharmacy', 'Primary Care'];
@@ -64,6 +64,7 @@ const STATE_STYLE: Record<RelationshipState, { stroke: string; dash: string }> =
 };
 
 export default function Graph() {
+  const { active } = useActiveCase();
   const [dept, setDept] = useState('All');
   const [rstate, setRstate] = useState<typeof STATES[number]>('All');
   const [rtype, setRtype] = useState<typeof RTYPES[number]>('All');
@@ -71,8 +72,8 @@ export default function Graph() {
   const [selectedNode, setSelectedNode] = useState<string | null>('a-cts-01');
 
   const relsFetcher = useCallback(
-    () => loadRelationships({ case_id: activeCase.id }),
-    [],
+    () => loadRelationships({ case_id: active.id }),
+    [active.id],
   );
   const actorsFetcher = useCallback(() => loadActors(), []);
 
@@ -262,6 +263,8 @@ export default function Graph() {
             selectedActor={selectedActor}
             edges={selectedEdges}
             patientCentered={selectedNode === 'case-zainal'}
+            patientName={active.patientName}
+            patientId={active.id}
           />
           <DistributionCard relationships={relationships} />
         </aside>
@@ -271,11 +274,13 @@ export default function Graph() {
 }
 
 function InspectorCard({
-  selectedActor, edges, patientCentered,
+  selectedActor, edges, patientCentered, patientName, patientId,
 }: {
   selectedActor: Actor | undefined;
   edges: Relationship[];
   patientCentered: boolean;
+  patientName: string;
+  patientId: string;
 }) {
   return (
     <div className="paper p-4">
@@ -286,7 +291,7 @@ function InspectorCard({
       {patientCentered ? (
         <>
           <div className="display mt-1 text-lg font-medium tracking-tightish text-ink">
-            Encik Zainal · {activeCase.id}
+            {patientName} · {patientId}
           </div>
           <div className="text-[12px] text-ink-muted">Patient · all relationships fan out from here</div>
         </>

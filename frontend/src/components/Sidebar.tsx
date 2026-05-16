@@ -103,20 +103,6 @@ export default function Sidebar() {
           </li>
         </ul>
       </nav>
-
-      <div className="border-t border-line/70 p-4">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-coral-400 to-coral-500 p-4 text-white shadow-coral">
-          <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-butter-300/40 blur-2xl" />
-          <div className="relative">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-              Demo Mode
-            </div>
-            <div className="mt-1 text-[11.5px] leading-relaxed text-white/90">
-              All data is mocked. Wire up the backend at <span className="font-mono">/api</span> when ready.
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

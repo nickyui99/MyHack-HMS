@@ -1,43 +1,72 @@
 import { useLocation } from 'react-router-dom';
-import { activeCase } from '@/data/cases';
+import { useActiveCase } from '@/lib/activeCase';
 import { stageForPath } from '@/lib/stages';
 import HealthBadge from './HealthBadge';
 
 export default function TopBar() {
   const { pathname } = useLocation();
   const stage = stageForPath(pathname);
+  const { active, cases, setActiveId } = useActiveCase();
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-line/70 bg-paper/95 px-8 backdrop-blur">
-      <div className="flex items-center gap-3 text-sm">
-        <span className="chip chip-stage">
-          {stage.family} {stage.number !== '—' ? `· ${stage.number}` : ''}
-        </span>
-        <span className="hidden h-5 w-px bg-line sm:block" />
-        <span className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-4 text-sm">
+        {/* Stage announcement — larger and colored so it's actually noticeable */}
+        <div
+          className="flex items-center gap-2.5 rounded-2xl px-3.5 py-1.5 shadow-soft"
+          style={{
+            background: 'var(--stage-soft)',
+            color: 'var(--stage-ink)',
+          }}
+        >
+          <span
+            className="display grid h-7 w-7 place-items-center rounded-lg text-sm font-semibold tabular leading-none"
+            style={{ background: 'var(--stage-deep)', color: 'white' }}
+          >
+            {stage.number === '—' ? '∞' : stage.number}
+          </span>
+          <span className="display text-[14px] font-semibold tracking-tight">
+            {stage.title}
+          </span>
+        </div>
+
+        <span className="hidden h-6 w-px bg-line sm:block" />
+
+        {/* Active case dropdown — lets you switch patients */}
+        <label className="flex items-center gap-2">
           <span className="live-dot" />
-          <span className="text-[11px] uppercase tracking-[0.16em] text-ink-subtle">
-            Active case
+          <span className="text-[10px] uppercase tracking-[0.16em] text-ink-subtle">
+            Patient
           </span>
-          <span className="display text-base font-medium text-ink">
-            {activeCase.patientName}
+          <span className="relative">
+            <select
+              value={active.id}
+              onChange={(e) => setActiveId(e.target.value)}
+              className="appearance-none rounded-xl border border-line bg-paper px-3 py-1.5 pr-8 text-[13px] font-medium text-ink hover:bg-cream/60 focus:outline-none focus:ring-2 focus:ring-teal-300/70"
+            >
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.patientName} · {c.age}{c.sex} · {c.diagnosis}
+                </option>
+              ))}
+            </select>
+            <svg
+              viewBox="0 0 24 24"
+              className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </span>
-          <span className="text-ink-subtle">·</span>
-          <span className="text-ink-muted">{activeCase.diagnosis}</span>
-        </span>
+        </label>
       </div>
 
       <div className="flex items-center gap-3">
         <HealthBadge />
-
-        <button className="btn-ghost">
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m21 21-3.5-3.5" />
-          </svg>
-          <span className="hidden sm:inline">Search</span>
-          <kbd className="ml-1 hidden rounded-md border border-line bg-cream px-1.5 py-0.5 font-mono text-[10px] text-ink-subtle sm:inline">⌘K</kbd>
-        </button>
 
         <div className="h-6 w-px bg-line" />
 
@@ -51,9 +80,6 @@ export default function TopBar() {
               GP · Klinik Sihat Puchong
             </div>
           </div>
-          <svg viewBox="0 0 24 24" className="mr-1.5 h-3.5 w-3.5 text-ink-subtle" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
         </div>
       </div>
     </header>
