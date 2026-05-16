@@ -1,0 +1,22 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.log
+
+# Env files — never commit these. .env.example is the shareable template.
+.env
+.env.*
+!.env.example
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Reference materials kept locally but not source-controlled
+*.docx
+*.pdf
+*.png
+!public/**/*.png
