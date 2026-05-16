@@ -1,0 +1,21 @@
+# ai-matching-engine dependencies
+# Install with: pip install -r requirements.txt
+
+# Google Cloud / Vertex AI
+google-cloud-aiplatform>=1.49.0
+google-cloud-enterpriseknowledgegraph>=0.3.0
+cloud-sql-python-connector[pg8000]>=1.9.0
+
+# Database
+sqlalchemy>=2.0.0
+pg8000>=1.30.0
+
+# Local dev — loads .env file automatically
+python-dotenv>=1.0.0
+
+# Match service (FastAPI)
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# No API keys needed — all auth via Application Default Credentials (ADC)
+# Run locally: gcloud auth application-default login
