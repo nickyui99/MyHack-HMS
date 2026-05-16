@@ -1,0 +1,18 @@
+[
+  {
+    "case_id": "case_zainal_2026",
+    "patient_pseudonym": "Encik Zainal Bin Mohd Ariff",
+    "age": 58,
+    "sex": "M",
+    "presenting_complaint": "Chest pain 2 hours, troponin elevated 0.45 ng/mL, ECG inferior ST depression",
+    "working_diagnosis": "NSTEMI, multivessel coronary disease likely",
+    "planned_procedure": "Coronary angiography then CABG if multivessel",
+    "panel": "Prudential",
+    "location_city": "Puchong",
+    "preferred_language": "ms",
+    "preferred_hospital_id": "hosp_sunway",
+    "scheduled_or_window": "2026-05-17T07:00:00+08:00",
+    "ward_assignment": "Ward 4B (Cardiac Step-Down), Bed 14",
+    "embedding_text": "58yo male NSTEMI multivessel disease elevated troponin inferior ST depression CABG candidate Prudential panel Puchong Malay preferred Sunway Medical OR-2 booking 7am tomorrow."
+  }
+]

@@ -1,0 +1,141 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_referral_16cdb6d735",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_referral_16cdb6d735",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "subtitle",
+            "card_1",
+            "card_2"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "Cardiologist candidates",
+          "variant": "h2"
+        },
+        {
+          "id": "subtitle",
+          "component": "Text",
+          "text": "Case case_zainal_2026 \u2014 Encik Zainal",
+          "variant": "caption"
+        },
+        {
+          "id": "name_1",
+          "component": "Text",
+          "text": "Dr Aravind Subramaniam \u2014 Sunway Medical Centre",
+          "variant": "h3"
+        },
+        {
+          "id": "score_1",
+          "component": "Text",
+          "text": "Match 78% \u00b7 vector 0.62 \u00b7 rule 1.0 \u00b7 outcome 0.95"
+        },
+        {
+          "id": "prior_1",
+          "component": "Text",
+          "text": "7 prior referrals with this GP"
+        },
+        {
+          "id": "btnlbl_1",
+          "component": "Text",
+          "text": "Confirm referral"
+        },
+        {
+          "id": "btn_1",
+          "component": "Button",
+          "child": "btnlbl_1",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "confirm_referral",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "cardio_actor_id": "act_aravind"
+              }
+            }
+          }
+        },
+        {
+          "id": "col_1",
+          "component": "Column",
+          "children": [
+            "name_1",
+            "score_1",
+            "prior_1",
+            "btn_1"
+          ]
+        },
+        {
+          "id": "card_1",
+          "component": "Card",
+          "child": "col_1"
+        },
+        {
+          "id": "name_2",
+          "component": "Text",
+          "text": "Dr Tan Chee Wei \u2014 Subang Jaya Medical Centre",
+          "variant": "h3"
+        },
+        {
+          "id": "score_2",
+          "component": "Text",
+          "text": "Match 66% \u00b7 vector 0.41 \u00b7 rule 1.0 \u00b7 outcome 0.89"
+        },
+        {
+          "id": "prior_2",
+          "component": "Text",
+          "text": "0 prior referrals with this GP"
+        },
+        {
+          "id": "btnlbl_2",
+          "component": "Text",
+          "text": "Confirm referral"
+        },
+        {
+          "id": "btn_2",
+          "component": "Button",
+          "child": "btnlbl_2",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "confirm_referral",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "cardio_actor_id": "act_tan_cw"
+              }
+            }
+          }
+        },
+        {
+          "id": "col_2",
+          "component": "Column",
+          "children": [
+            "name_2",
+            "score_2",
+            "prior_2",
+            "btn_2"
+          ]
+        },
+        {
+          "id": "card_2",
+          "component": "Card",
+          "child": "col_2"
+        }
+      ]
+    }
+  }
+]

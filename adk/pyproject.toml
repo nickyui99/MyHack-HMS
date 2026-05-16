@@ -1,0 +1,42 @@
+[project]
+name = "carelink-adk"
+version = "0.1.0"
+description = "CareLink Copilot — ADK orchestrator + 5 specialist agents emitting A2UI surfaces."
+requires-python = ">=3.10"
+dependencies = [
+    "google-adk>=1.33.0",
+    "a2ui-agent-sdk",
+    "a2a-sdk>=0.2,<0.3",  # pinned: a2ui-agent-sdk 0.2.2 imports DataPart from a2a.types (removed in 0.3+)
+    "google-genai>=1.0.0",
+    "google-cloud-aiplatform>=1.70.0",
+    "pydantic>=2.6",
+    "httpx>=0.27",
+    "orjson>=3.10",
+    "python-dotenv>=1.0",
+    "rich>=13.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.uv.sources]
+a2ui-agent-sdk = { git = "https://github.com/google/A2UI.git", subdirectory = "agent_sdks/python" }
+
+[tool.uv]
+# a2ui-agent-sdk 0.2.2 declares a2a-sdk>=0.3.0 but actually imports DataPart from
+# a2a.types — which exists only in a2a-sdk<0.3. We force the older version that works.
+override-dependencies = ["a2a-sdk>=0.2,<0.3"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agents", "tools", "backend_stub", "a2ui_surfaces", "personas"]
