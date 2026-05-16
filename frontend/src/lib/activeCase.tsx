@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { cases as defaultCases } from '@/data/cases';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { cases as fallbackCases } from '@/data/cases';
+import { loadCases } from '@/data/source';
 import type { PatientCase } from '@/lib/types';
 
 interface ActiveCaseCtx {
@@ -11,16 +12,34 @@ interface ActiveCaseCtx {
 const Ctx = createContext<ActiveCaseCtx | null>(null);
 
 /**
- * Wrap the app once. Picks the first seeded case as the initial active
- * patient; the TopBar dropdown drives `setActiveId`, which causes every
- * screen reading `useActiveCase()` to re-fetch matches for the new case.
+ * Wrap the app once. Seeds with the local mock list so the first paint always
+ * has a valid active patient, then fetches the real list from the backend and
+ * swaps it in. If the previously selected patient still exists in the fetched
+ * list it's preserved; otherwise we fall back to the first fetched case.
  */
 export function ActiveCaseProvider({ children }: { children: ReactNode }) {
-  const [activeId, setActiveId] = useState<string>(defaultCases[0].id);
+  const [cases, setCases] = useState<PatientCase[]>(fallbackCases);
+  const [activeId, setActiveId] = useState<string>(fallbackCases[0].id);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadCases().then(({ data }) => {
+      if (cancelled || data.length === 0) return;
+      setCases(data);
+      setActiveId((current) =>
+        data.some((c) => c.id === current) ? current : data[0].id,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const value = useMemo<ActiveCaseCtx>(() => {
-    const active = defaultCases.find((c) => c.id === activeId) ?? defaultCases[0];
-    return { cases: defaultCases, active, setActiveId };
-  }, [activeId]);
+    const active = cases.find((c) => c.id === activeId) ?? cases[0];
+    return { cases, active, setActiveId };
+  }, [cases, activeId]);
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
