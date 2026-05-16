@@ -1,0 +1,19 @@
+{
+  "name": "carelink-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^1.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {}
+}
