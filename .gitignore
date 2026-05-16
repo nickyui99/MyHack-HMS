@@ -1,0 +1,25 @@
+# Node dependencies
+node_modules/
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+
+# Terraform generated files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
