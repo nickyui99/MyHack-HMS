@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import ChatLauncher from './chat/ChatLauncher';
 import { stageForPath } from '@/lib/stages';
 import { useEffect } from 'react';
 
@@ -29,6 +30,7 @@ export default function AppShell() {
           </div>
         </main>
       </div>
+      <ChatLauncher />
     </div>
   );
 }
