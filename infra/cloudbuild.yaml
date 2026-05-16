@@ -2,6 +2,8 @@ substitutions:
   _REGION: asia-southeast1
   _SERVICE: carelink-api
   _REPOSITORY: carelink-images
+  _CLOUD_SQL_INSTANCE: hackathon-myhack:asia-southeast1:postgres
+  _MATCH_SERVICE_URL: https://carelink-match-service-305487732751.asia-southeast1.run.app
 
 steps:
   - name: gcr.io/cloud-builders/docker
@@ -28,7 +30,9 @@ steps:
       - --service-account=carelink-runtime@${PROJECT_ID}.iam.gserviceaccount.com
       - --allow-unauthenticated
       - --max-instances=1
-      - --set-env-vars=CARELINK_ENVIRONMENT=cloud,CARELINK_IAP_REQUIRED=false,CARELINK_SQLITE_PATH=/tmp/carelink.sqlite
+      - --add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}
+      - --set-env-vars=CARELINK_ENVIRONMENT=cloud,CARELINK_IAP_REQUIRED=false,CARELINK_CLOUD_SQL_INSTANCE=${_CLOUD_SQL_INSTANCE},CARELINK_DB_NAME=carelink,CARELINK_DB_USER=carelink-runtime@${PROJECT_ID}.iam,CARELINK_CLOUD_SQL_IP_TYPE=PUBLIC,MATCH_SERVICE_URL=${_MATCH_SERVICE_URL}
+      - --remove-env-vars=CARELINK_SQLITE_PATH
 
 images:
   - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE}:${BUILD_ID}
