@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { useActiveCase } from '@/lib/activeCase';
 import { stageForPath } from '@/lib/stages';
@@ -91,12 +92,35 @@ function PatientPicker({
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const dropRef = useRef<HTMLDivElement | null>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  // Track the button's viewport rect so the portaled dropdown can anchor
+  // under it (header has backdrop-blur → creates a containing block for
+  // fixed/absolute descendants, so we render to <body> via portal).
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const r = wrapRef.current?.getBoundingClientRect();
+      if (r) setAnchor({ top: r.bottom, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
 
   // Close on outside click or Escape.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t)) return;
+      if (dropRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -137,10 +161,12 @@ function PatientPicker({
         </svg>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={dropRef}
           role="listbox"
-          className="absolute left-0 top-full z-50 mt-2 w-[min(22rem,80vw)] origin-top-left animate-rise rounded-3xl border border-line bg-paper p-1.5 shadow-pop"
+          style={{ position: 'fixed', top: anchor.top + 8, left: anchor.left, minWidth: anchor.width }}
+          className="z-[1000] w-[min(22rem,80vw)] origin-top-left animate-rise rounded-3xl border border-line bg-paper p-1.5 shadow-pop"
         >
           <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
             {cases.map((c) => {
@@ -203,7 +229,8 @@ function PatientPicker({
               );
             })}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

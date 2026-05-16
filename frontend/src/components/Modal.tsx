@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 interface Props {
@@ -23,9 +24,12 @@ export default function Modal({ open, onClose, title, description, children, foo
 
   const widthCls = size === 'sm' ? 'max-w-md' : size === 'lg' ? 'max-w-3xl' : 'max-w-xl';
 
-  return (
+  // Portal to document.body so the modal escapes any ancestor stacking
+  // contexts (e.g. headers with backdrop-blur, which create a containing
+  // block for fixed-positioned descendants).
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
       onMouseDown={onClose}
     >
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" aria-hidden />
@@ -51,6 +55,7 @@ export default function Modal({ open, onClose, title, description, children, foo
         <div className="mt-4">{children}</div>
         {footer && <div className="mt-5 flex items-center justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

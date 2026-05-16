@@ -34,7 +34,16 @@
       "Bash(taskkill /F /IM node.exe)",
       "PowerShell(Get-Process -Name node -ErrorAction SilentlyContinue)",
       "PowerShell(Stop-Process -Force)",
-      "PowerShell(\"ok\")"
+      "PowerShell(\"ok\")",
+      "Bash(curl -sS https://carelink-api-staging-305487732751.asia-southeast1.run.app/cases)",
+      "Bash(curl -sS https://carelink-api-staging-305487732751.asia-southeast1.run.app/actors)",
+      "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -H \"x-carelink-local-user: gp.amirul@carelink.demo\" -d '{\"case_id\":\"9c0fbb63-0554-4020-a853-3c6837d670b8\",\"relationship_type\":\"gp_referral\",\"actor_a_id\":\"00000000-0000-4000-8000-000000000001\",\"actor_b_id\":\"00000000-0000-4000-8000-000000000011\",\"case_context\":{\"source\":\"curl test\"}}' https://carelink-api-staging-305487732751.asia-southeast1.run.app/relationships)",
+      "Bash(curl -sS -i -X OPTIONS -H \"Origin: http://localhost:5174\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: content-type,x-carelink-local-user\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/relationships)",
+      "Bash(curl -sS \"https://carelink-api-staging-305487732751.asia-southeast1.run.app/actors?role=cardiologist\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"{a['outcome_weight']:>4}  {a['name']}\\\\\"\\) for a in sorted\\(d, key=lambda a: -float\\(a.get\\('outcome_weight'\\) or 0\\)\\)]\")",
+      "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" https://carelink-match-service-305487732751.asia-southeast1.run.app/health)",
+      "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -d '{\"case_ctx\":{\"diagnosis\":\"NSTEMI\",\"payer\":\"Prudential BSN\",\"location\":\"Puchong\",\"urgency\":\"urgent\"},\"top_n\":3}' https://carelink-match-service-305487732751.asia-southeast1.run.app/match/referral)",
+      "Bash(node --check src/routes/match.js)"
     ]
   }
 }
