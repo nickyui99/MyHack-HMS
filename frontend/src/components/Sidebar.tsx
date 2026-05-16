@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { stageList } from '@/lib/stages';
 import StageIcon from './StageIcon';
+import NewActorModal from './NewActorModal';
 
 export default function Sidebar() {
+  const [newActorOpen, setNewActorOpen] = useState(false);
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-line/70 bg-paper md:flex">
       <div className="flex h-16 items-center gap-3 border-b border-line/70 px-5">
@@ -101,8 +104,21 @@ export default function Sidebar() {
               <span className="chip ml-auto">GET /audit</span>
             </NavLink>
           </li>
+          <li>
+            <button
+              onClick={() => setNewActorOpen(true)}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-ink-muted transition hover:bg-cream/70 hover:text-ink"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              New clinician
+              <span className="chip ml-auto">POST /actors</span>
+            </button>
+          </li>
         </ul>
       </nav>
+      <NewActorModal open={newActorOpen} onClose={() => setNewActorOpen(false)} />
     </aside>
   );
 }

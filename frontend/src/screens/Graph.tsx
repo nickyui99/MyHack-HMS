@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import StageHero from '@/components/StageHero';
-import SourceBadge, { ErrorState } from '@/components/SourceBadge';
-import { loadActors, loadRelationships } from '@/data/source';
+import SourceBadge, { ErrorState, FallbackBanner } from '@/components/SourceBadge';
+import OutcomeModal from '@/components/OutcomeModal';
+import { loadActors, loadRelationships, setRelationshipState } from '@/data/source';
 import { useApi } from '@/lib/useApi';
+import { useMutation } from '@/lib/useMutation';
 import type { Actor, ActorType, Relationship, RelationshipState, RelationshipType } from '@/lib/types';
 import { dateShort, initials } from '@/lib/format';
 import { stages } from '@/lib/stages';
@@ -321,6 +323,14 @@ export default function Graph() {
     (r) => selectedNode && (r.actorA === selectedNode || r.actorB === selectedNode),
   );
 
+  const stateMut = useMutation(setRelationshipState);
+  const [outcomeFor, setOutcomeFor] = useState<Relationship | null>(null);
+
+  const transition = async (rel: Relationship, next: RelationshipState) => {
+    await stateMut.run(rel.id, next);
+    await rels.refetch();
+  };
+
   const loading = rels.loading || acts.loading;
   const error = rels.error || acts.error;
   const patientLabel = active.patientName.split(' ').slice(-1)[0] || active.patientName;
@@ -354,6 +364,9 @@ export default function Graph() {
             </div>
           </div>
 
+          {source && (
+            <div className="px-3 pt-3"><FallbackBanner source={source} onRetry={() => rels.refetch()} /></div>
+          )}
           {loading && (
             <div className="grid h-[480px] place-items-center text-[11px] uppercase tracking-[0.18em] text-ink-subtle">
               Loading graph…
@@ -497,22 +510,47 @@ export default function Graph() {
             patientCentered={selectedNode === PATIENT_NODE_ID}
             patientName={active.patientName}
             patientId={active.id}
+            onTransition={transition}
+            onRecordOutcome={(rel) => setOutcomeFor(rel)}
+            mutationLoading={stateMut.loading}
+            mutationError={stateMut.error}
           />
           <DistributionCard relationships={relationships} />
         </aside>
       </div>
+
+      {outcomeFor && (
+        <OutcomeModal
+          open={!!outcomeFor}
+          onClose={() => setOutcomeFor(null)}
+          caseId={active.id}
+          relationshipId={outcomeFor.id}
+          onRecorded={() => rels.refetch()}
+        />
+      )}
     </>
   );
 }
 
+const NEXT_STATES: Partial<Record<RelationshipState, { state: RelationshipState; label: string }[]>> = {
+  proposed:  [{ state: 'confirmed', label: 'Approve' }, { state: 'blocked', label: 'Block' }],
+  confirmed: [{ state: 'active', label: 'Activate' }],
+  active:    [{ state: 'completed', label: 'Complete + outcome' }],
+};
+
 function InspectorCard({
   selectedActor, edges, patientCentered, patientName, patientId,
+  onTransition, onRecordOutcome, mutationLoading, mutationError,
 }: {
   selectedActor: Actor | undefined;
   edges: Relationship[];
   patientCentered: boolean;
   patientName: string;
   patientId: string;
+  onTransition: (rel: Relationship, next: RelationshipState) => void;
+  onRecordOutcome: (rel: Relationship) => void;
+  mutationLoading: boolean;
+  mutationError: Error | undefined;
 }) {
   return (
     <div className="paper p-4">
@@ -546,30 +584,56 @@ function InspectorCard({
 
       <div className="mt-4">
         <div className="section-label">Edges from this node · {edges.length}</div>
+        {mutationError && (
+          <div className="mt-1 text-[11px] text-rose-700">Error: {mutationError.message}</div>
+        )}
         <ul className="mt-2 space-y-1.5">
-          {edges.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center justify-between rounded-lg border border-line bg-cream/40 px-2.5 py-1.5 text-[12px]"
-            >
-              <div>
-                <div className="font-medium text-ink">
-                  {e.type.replace('_', ' ')}
+          {edges.map((e) => {
+            const next = NEXT_STATES[e.state] ?? [];
+            return (
+              <li
+                key={e.id}
+                className="rounded-lg border border-line bg-cream/40 px-2.5 py-1.5 text-[12px]"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-ink">
+                      {e.type.replace('_', ' ')}
+                    </div>
+                    <div className="text-[11px] text-ink-subtle">
+                      {e.department}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-[11px] text-ink">w {e.weight.toFixed(2)}</div>
+                    <div className={`text-[10px] uppercase tracking-wider ${
+                      e.state === 'blocked'   ? 'text-rose-700'
+                      : e.state === 'proposed' ? 'text-ink-subtle'
+                      : 'text-emerald-700'
+                    }`}>{e.state}</div>
+                  </div>
                 </div>
-                <div className="text-[11px] text-ink-subtle">
-                  {e.department}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-[11px] text-ink">w {e.weight.toFixed(2)}</div>
-                <div className={`text-[10px] uppercase tracking-wider ${
-                  e.state === 'blocked'   ? 'text-rose-700'
-                  : e.state === 'proposed' ? 'text-ink-subtle'
-                  : 'text-emerald-700'
-                }`}>{e.state}</div>
-              </div>
-            </li>
-          ))}
+                {next.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {next.map((t) => (
+                      <button
+                        key={t.state}
+                        onClick={() =>
+                          t.state === 'completed'
+                            ? onRecordOutcome(e)
+                            : onTransition(e, t.state)
+                        }
+                        disabled={mutationLoading}
+                        className="rounded-full border border-line bg-paper px-2 py-0.5 text-[10.5px] font-medium text-ink transition hover:bg-cream/60 disabled:opacity-50"
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

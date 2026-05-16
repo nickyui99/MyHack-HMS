@@ -24,7 +24,7 @@
  *   GET   /audit              ?case_id=&relationship_id=
  */
 
-import { API_BASE_URL } from './env';
+import { API_BASE_URL, LOCAL_USER_EMAIL } from './env';
 import type {
   Actor,
   ActorType,
@@ -66,12 +66,15 @@ async function request<T>(
     }
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (LOCAL_USER_EMAIL) headers['x-carelink-local-user'] = LOCAL_USER_EMAIL;
+
   const res = await fetch(url.toString(), {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 

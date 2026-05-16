@@ -19,6 +19,17 @@ export const API_BASE_URL: string = (env.VITE_API_BASE_URL ?? '').replace(/\/$/,
 export const FORCED_DEMO: boolean = env.VITE_DEMO_MODE === '1';
 export const HAS_API: boolean = Boolean(API_BASE_URL) && !FORCED_DEMO;
 
+// Sent as x-carelink-local-user so the backend currentUser() middleware can
+// stamp audit logs and authorize mutations. Staging Cloud Run is
+// --allow-unauthenticated (no IAP), so this header is the only "who's calling".
+export const LOCAL_USER_EMAIL: string = env.VITE_LOCAL_USER_EMAIL ?? '';
+
+// Seeded GP actor id in the backend's demo dataset — used as `actor_a` (the
+// requesting clinician) on relationships and match calls. Mirrors the value
+// already hardcoded in src/lib/api.ts for match calls.
+export const REQUESTER_ACTOR_ID: string =
+  env.VITE_REQUESTER_ACTOR_ID ?? '00000000-0000-4000-8000-000000000001';
+
 export const ADK_BASE_URL: string =
   (env.VITE_ADK_BASE_URL ?? '/adk').replace(/\/$/, '');
 export const ADK_PERSONA_USER_ID: string =

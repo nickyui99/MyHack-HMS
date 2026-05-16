@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { cases as fallbackCases } from '@/data/cases';
 import { loadCases } from '@/data/source';
 import type { PatientCase } from '@/lib/types';
@@ -7,6 +7,7 @@ interface ActiveCaseCtx {
   cases: PatientCase[];
   active: PatientCase;
   setActiveId: (id: string) => void;
+  addCase: (c: PatientCase) => void;
 }
 
 const Ctx = createContext<ActiveCaseCtx | null>(null);
@@ -35,10 +36,15 @@ export function ActiveCaseProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const addCase = useCallback((c: PatientCase) => {
+    setCases((prev) => (prev.some((p) => p.id === c.id) ? prev : [c, ...prev]));
+    setActiveId(c.id);
+  }, []);
+
   const value = useMemo<ActiveCaseCtx>(() => {
     const active = cases.find((c) => c.id === activeId) ?? cases[0];
-    return { cases, active, setActiveId };
-  }, [cases, activeId]);
+    return { cases, active, setActiveId, addCase };
+  }, [cases, activeId, addCase]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

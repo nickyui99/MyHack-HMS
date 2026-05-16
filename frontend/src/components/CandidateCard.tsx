@@ -9,6 +9,9 @@ interface Props {
   rank: number;
   selected?: boolean;
   onSelect?: () => void;
+  onConfirm?: () => void;
+  confirming?: boolean;
+  confirmed?: boolean;
   ctaLabel?: string;
   variant?: 'featured' | 'row' | 'tile';
 }
@@ -18,10 +21,13 @@ export default function CandidateCard({
   rank,
   selected = false,
   onSelect,
+  onConfirm,
+  confirming = false,
+  confirmed = false,
   ctaLabel = 'Confirm',
   variant = 'row',
 }: Props) {
-  const common = { candidate, rank, selected, onSelect, ctaLabel };
+  const common = { candidate, rank, selected, onSelect, onConfirm, confirming, confirmed, ctaLabel };
   if (variant === 'featured') return <FeaturedCard {...common} />;
   if (variant === 'tile') return <TileCard {...common} />;
   return <RowCard {...common} />;
@@ -32,12 +38,35 @@ interface VariantProps {
   rank: number;
   selected: boolean;
   onSelect?: () => void;
+  onConfirm?: () => void;
+  confirming: boolean;
+  confirmed: boolean;
   ctaLabel: string;
+}
+
+function ctaHandler(selected: boolean, onSelect?: () => void, onConfirm?: () => void) {
+  // If onConfirm is provided, two-step flow: first click selects, second click confirms.
+  // Otherwise the button just toggles selection.
+  if (!onConfirm) return onSelect;
+  return selected ? onConfirm : onSelect;
+}
+
+function ctaText(
+  selected: boolean,
+  ctaLabel: string,
+  onConfirm: (() => void) | undefined,
+  confirming: boolean,
+  confirmed: boolean,
+) {
+  if (confirmed) return 'Sent ✓';
+  if (confirming) return 'Sending…';
+  if (onConfirm) return selected ? ctaLabel : 'Select';
+  return selected ? 'Selected ✓' : ctaLabel;
 }
 
 // ── Variant: row ─────────────────────────────────────────────────
 function RowCard({
-  candidate, rank, selected, onSelect, ctaLabel,
+  candidate, rank, selected, onSelect, onConfirm, confirming, confirmed, ctaLabel,
 }: VariantProps) {
   const { actor, score, compliance, rationale } = candidate;
   const blocked = !compliance.apcValid;
@@ -129,10 +158,11 @@ function RowCard({
             <button className="btn-secondary">Override</button>
           ) : (
             <button
-              className={selected ? 'btn-secondary' : 'btn-primary'}
-              onClick={onSelect}
+              className={selected && !confirmed ? 'btn-primary' : 'btn-secondary'}
+              onClick={ctaHandler(selected, onSelect, onConfirm)}
+              disabled={confirming || confirmed}
             >
-              {selected ? 'Selected ✓' : ctaLabel}
+              {ctaText(selected, ctaLabel, onConfirm, confirming, confirmed)}
             </button>
           )}
         </div>
@@ -143,7 +173,7 @@ function RowCard({
 
 // ── Variant: featured ────────────────────────────────────────────
 function FeaturedCard({
-  candidate, selected, onSelect, ctaLabel,
+  candidate, selected, onSelect, onConfirm, confirming, confirmed, ctaLabel,
 }: VariantProps) {
   const { actor, score, compliance, rationale } = candidate;
   const total = score100(score.total / 100);
@@ -208,10 +238,11 @@ function FeaturedCard({
             <ScoreBreakdown score={score} compact />
           </div>
           <button
-            className={selected ? 'btn-secondary w-full' : 'btn-stage w-full'}
-            onClick={onSelect}
+            className={selected && !confirmed ? 'btn-stage w-full' : 'btn-secondary w-full'}
+            onClick={ctaHandler(selected, onSelect, onConfirm)}
+            disabled={confirming || confirmed}
           >
-            {selected ? 'Selected ✓' : ctaLabel}
+            {ctaText(selected, ctaLabel, onConfirm, confirming, confirmed)}
           </button>
         </div>
       </div>
@@ -221,7 +252,7 @@ function FeaturedCard({
 
 // ── Variant: tile ────────────────────────────────────────────────
 function TileCard({
-  candidate, selected, onSelect, ctaLabel,
+  candidate, selected, onSelect, ctaLabel, confirmed,
 }: VariantProps) {
   const { actor, score, compliance } = candidate;
   const blocked = !compliance.apcValid;
@@ -269,7 +300,11 @@ function TileCard({
         )}
       </div>
       <div className="mt-2 text-right text-[11px] text-ink-subtle">
-        {selected ? '— Selected —' : <span className="opacity-0 group-hover:opacity-100">{ctaLabel} →</span>}
+        {confirmed
+          ? '— Sent —'
+          : selected
+            ? '— Selected —'
+            : <span className="opacity-0 group-hover:opacity-100">{ctaLabel} →</span>}
       </div>
     </button>
   );

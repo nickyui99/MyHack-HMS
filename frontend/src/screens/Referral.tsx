@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import StageHero from '@/components/StageHero';
 import CandidateCard from '@/components/CandidateCard';
 import FilterBar from '@/components/FilterBar';
-import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
+import SourceBadge, { ErrorState, FallbackBanner, SkeletonList } from '@/components/SourceBadge';
 import Disclosure from '@/components/Disclosure';
-import { loadActors, runReferralMatch } from '@/data/source';
+import { createRelationship, loadActors, runReferralMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
+import { useMutation } from '@/lib/useMutation';
 import { useActiveCase } from '@/lib/activeCase';
+import { REQUESTER_ACTOR_ID } from '@/lib/env';
 import { stages } from '@/lib/stages';
 import type { Actor } from '@/lib/types';
 import { initials, nullable } from '@/lib/format';
@@ -33,6 +35,25 @@ export default function Referral() {
 
   const candidates = data?.data ?? [];
   const source = data?.source;
+
+  // Persisted state per actor id so the card knows whether it's been "sent".
+  const sendMut = useMutation(createRelationship);
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
+  const handleConfirm = async () => {
+    if (!selected) return;
+    const result = await sendMut.run({
+      type: 'gp_referral',
+      actor_a: REQUESTER_ACTOR_ID,
+      actor_b: selected,
+      department: 'Cardiology',
+      case_id: active.id,
+      justification: `Referral from ${active.diagnosis}`,
+    });
+    if (result) {
+      setSentIds((prev) => new Set(prev).add(selected));
+    }
+  };
 
   // Reset selection whenever a new match run comes back.
   useEffect(() => {
@@ -93,6 +114,19 @@ export default function Referral() {
           {loading && <SkeletonList rows={3} />}
           {error && <ErrorState error={error} onRetry={refetch} />}
 
+          {source && <FallbackBanner source={source} onRetry={refetch} />}
+
+          {sendMut.error && (
+            <div className="mb-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[12px] text-rose-800">
+              Couldn't send referral: {sendMut.error.message}
+            </div>
+          )}
+          {sendMut.data && (
+            <div className="mb-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900">
+              Referral created · state <span className="font-mono">{sendMut.data.state}</span>
+            </div>
+          )}
+
           {!loading && !error && featured && (
             <CandidateCard
               variant="featured"
@@ -100,6 +134,9 @@ export default function Referral() {
               rank={1}
               selected={selected === featured.actor.id}
               onSelect={() => setSelected(featured.actor.id)}
+              onConfirm={handleConfirm}
+              confirming={sendMut.loading && selected === featured.actor.id}
+              confirmed={sentIds.has(featured.actor.id)}
               ctaLabel="Send referral"
             />
           )}
@@ -119,6 +156,10 @@ export default function Referral() {
                       rank={i + 2}
                       selected={selected === c.actor.id}
                       onSelect={() => setSelected(c.actor.id)}
+                      onConfirm={handleConfirm}
+                      confirming={sendMut.loading && selected === c.actor.id}
+                      confirmed={sentIds.has(c.actor.id)}
+                      ctaLabel="Send referral"
                     />
                   ))}
                 </div>

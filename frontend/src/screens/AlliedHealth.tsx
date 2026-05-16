@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
 import StageHero from '@/components/StageHero';
-import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
+import SourceBadge, { ErrorState, FallbackBanner, SkeletonList } from '@/components/SourceBadge';
 import Disclosure from '@/components/Disclosure';
-import { runAlliedMatch } from '@/data/source';
+import { createRelationship, runAlliedMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
+import { REQUESTER_ACTOR_ID } from '@/lib/env';
 import { stages } from '@/lib/stages';
 import { initials } from '@/lib/format';
 import { useActiveCase } from '@/lib/activeCase';
@@ -31,11 +32,36 @@ export default function AlliedHealth() {
   const candidates = data?.data ?? [];
   const source = data?.source;
 
-  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({
-    Physiotherapy: true,
-    Nutrition: true,
-    Pharmacy: true,
-  });
+  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+
+  const handleSchedule = async (title: string, actorId: string) => {
+    setPending((p) => ({ ...p, [title]: true }));
+    setErrors((e) => ({ ...e, [title]: null }));
+    try {
+      const rel = await createRelationship({
+        type: 'allied_health',
+        actor_a: REQUESTER_ACTOR_ID,
+        actor_b: actorId,
+        department: title,
+        case_id: active.id,
+        justification: `Allied health assignment · ${title}`,
+      });
+      if (rel.state === 'blocked') {
+        setErrors((e) => ({ ...e, [title]: 'Blocked by compliance' }));
+      } else {
+        setConfirmed((c) => ({ ...c, [title]: true }));
+      }
+    } catch (err) {
+      setErrors((e) => ({
+        ...e,
+        [title]: err instanceof Error ? err.message : String(err),
+      }));
+    } finally {
+      setPending((p) => ({ ...p, [title]: false }));
+    }
+  };
 
   // Pick the best candidate per service type from the returned ranking.
   const bestByType = new Map<string, MatchCandidate>();
@@ -123,6 +149,7 @@ export default function AlliedHealth() {
 
       {loading && <SkeletonList rows={2} />}
       {error && <ErrorState error={error} onRetry={refetch} />}
+      {source && <FallbackBanner source={source} onRetry={refetch} />}
 
       {!loading && !error && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -135,8 +162,10 @@ export default function AlliedHealth() {
                 duration={s.duration}
                 goal={s.goal}
                 candidate={cand}
-                confirmed={confirmed[s.title]}
-                onToggle={() => setConfirmed((c) => ({ ...c, [s.title]: !c[s.title] }))}
+                confirmed={!!confirmed[s.title]}
+                pending={!!pending[s.title]}
+                errorMessage={errors[s.title] ?? null}
+                onSchedule={() => handleSchedule(s.title, cand.actor.id)}
               />
             ) : (
               <div key={s.title} className="paper p-5">
@@ -159,10 +188,12 @@ interface ServiceCardProps {
   goal: string;
   candidate: MatchCandidate;
   confirmed: boolean;
-  onToggle: () => void;
+  pending: boolean;
+  errorMessage: string | null;
+  onSchedule: () => void;
 }
 
-function ServiceCard({ title, duration, goal, candidate, confirmed, onToggle }: ServiceCardProps) {
+function ServiceCard({ title, duration, goal, candidate, confirmed, pending, errorMessage, onSchedule }: ServiceCardProps) {
   const { actor, score, compliance } = candidate;
   return (
     <article className="paper paper-hover relative flex flex-col gap-4 p-5">
@@ -209,13 +240,20 @@ function ServiceCard({ title, duration, goal, candidate, confirmed, onToggle }: 
         </div>
       </div>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[11.5px] text-rose-800">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <button className="btn-ghost text-[12px]">Reschedule</button>
         <button
-          onClick={onToggle}
+          onClick={onSchedule}
+          disabled={pending || confirmed}
           className={confirmed ? 'btn-secondary' : 'btn-stage'}
         >
-          {confirmed ? 'Unschedule' : 'Schedule'}
+          {pending ? 'Scheduling…' : confirmed ? 'Scheduled ✓' : 'Schedule'}
         </button>
       </div>
     </article>

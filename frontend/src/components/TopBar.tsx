@@ -4,11 +4,13 @@ import { useActiveCase } from '@/lib/activeCase';
 import { stageForPath } from '@/lib/stages';
 import type { PatientCase } from '@/lib/types';
 import HealthBadge from './HealthBadge';
+import NewCaseModal from './NewCaseModal';
 
 export default function TopBar() {
   const { pathname } = useLocation();
   const stage = stageForPath(pathname);
-  const { active, cases, setActiveId } = useActiveCase();
+  const { active, cases, setActiveId, addCase } = useActiveCase();
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-line/70 bg-paper/95 px-8 backdrop-blur">
@@ -41,8 +43,21 @@ export default function TopBar() {
             Patient
           </span>
           <PatientPicker cases={cases} active={active} onPick={setActiveId} />
+          <button
+            onClick={() => setNewCaseOpen(true)}
+            className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11px] font-medium text-ink shadow-soft transition hover:bg-cream/60"
+            title="Create a new case"
+          >
+            + New case
+          </button>
         </div>
       </div>
+
+      <NewCaseModal
+        open={newCaseOpen}
+        onClose={() => setNewCaseOpen(false)}
+        onCreated={addCase}
+      />
 
       <div className="flex items-center gap-3">
         <HealthBadge />

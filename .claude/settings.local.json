@@ -24,7 +24,17 @@
       "Bash(curl -sS -w \"\\\\nHTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)",
       "Bash(git -C backend ls-files)",
       "Bash(git -C backend ls-files data/)",
-      "Bash(git -C . status --short backend/)"
+      "Bash(git -C . status --short backend/)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\nicho\\\\OneDrive\\\\Documents\\\\Pointstar\\\\Teams_Migration\\\\MyHack-HMS\\\\backend\\\\src\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" https://carelink-api-staging-305487732751.asia-southeast1.run.app/health)",
+      "Bash(curl -sS -w \"\\\\n--HTTP %{http_code}\\\\n\" -X POST -H \"Content-Type: application/json\" -H \"x-carelink-local-user: gp.amirul@carelink.demo\" -d '{\"patient_name\":\"Smoke Test\",\"patient_age\":42,\"patient_gender\":\"male\",\"diagnosis\":\"Test diagnosis\",\"case_stage\":\"intake\",\"urgency\":\"routine\",\"clinical_context\":{\"notes\":\"smoke test via curl\"}}' https://carelink-api-staging-305487732751.asia-southeast1.run.app/cases)",
+      "Bash(taskkill /F /IM node.exe)",
+      "PowerShell(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(\"ok\")"
     ]
   }
 }

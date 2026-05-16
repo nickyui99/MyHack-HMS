@@ -159,6 +159,15 @@ const mockAudit: AuditEvent[] = [
 export const loadAudit = (limit = 100): Promise<Sourced<AuditEvent[]>> =>
   withFallback(() => api.listAudit(limit), mockAudit);
 
+// ── Mutations ────────────────────────────────────────────────────
+// Mutations don't fall back to mocks — if the backend is down we want the
+// caller to see the error and surface it in the UI.
+export const createCase = api.createCase;
+export const createActor = api.createActor;
+export const createRelationship = api.createRelationship;
+export const setRelationshipState = api.setRelationshipState;
+export const createOutcome = api.createOutcome;
+
 // ── Health ───────────────────────────────────────────────────────
 export type HealthStatus = 'live' | 'degraded' | 'mock';
 

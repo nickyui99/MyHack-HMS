@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import StageHero from '@/components/StageHero';
 import CandidateCard from '@/components/CandidateCard';
-import SourceBadge, { ErrorState, SkeletonList } from '@/components/SourceBadge';
+import SourceBadge, { ErrorState, FallbackBanner, SkeletonList } from '@/components/SourceBadge';
 import Disclosure from '@/components/Disclosure';
-import { runSurgicalMatch } from '@/data/source';
+import { createRelationship, runSurgicalMatch } from '@/data/source';
 import { useApi } from '@/lib/useApi';
+import { useMutation } from '@/lib/useMutation';
 import { useActiveCase } from '@/lib/activeCase';
+import { REQUESTER_ACTOR_ID } from '@/lib/env';
 import type { MatchCandidate, SurgicalRole } from '@/lib/types';
 import { initials } from '@/lib/format';
 import { stages } from '@/lib/stages';
@@ -51,6 +53,24 @@ export default function SurgicalTeam() {
     });
     return count === 0 ? 0 : Math.round(total / count);
   }, [picks, byRole]);
+
+  const teamMut = useMutation(async () => {
+    const created = [] as Awaited<ReturnType<typeof createRelationship>>[];
+    for (const role of ROLES) {
+      const id = picks[role];
+      if (!id) continue;
+      const rel = await createRelationship({
+        type: 'surgical_team',
+        actor_a: REQUESTER_ACTOR_ID,
+        actor_b: id,
+        department: role,
+        case_id: active.id,
+        justification: `Surgical team assembly · ${role}`,
+      });
+      created.push(rel);
+    }
+    return created;
+  });
 
   const completeness = ROLES.filter((r) => picks[r]).length;
   const pairBonus = byRole
@@ -120,6 +140,7 @@ export default function SurgicalTeam() {
 
       {loading && <SkeletonList rows={2} />}
       {error && <ErrorState error={error} onRetry={refetch} />}
+      {source && <FallbackBanner source={source} onRetry={refetch} />}
 
       {!loading && !error && byRole && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -136,13 +157,30 @@ export default function SurgicalTeam() {
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-line bg-paper p-5 shadow-soft">
-        <div className="text-[12.5px] text-ink-muted">
+        <div className="flex-1 text-[12.5px] text-ink-muted">
           The historical-pair bonus rewards teams whose members have worked together on
-          cardiac cases in the last 12 months. Approved teams write 4 relationships into
-          the graph (POST /relationships, one per role).
+          cardiac cases in the last 12 months. Approved teams write {completeness} relationships
+          into the graph (POST /relationships, one per role).
+          {teamMut.error && (
+            <div className="mt-2 text-rose-700">Error: {teamMut.error.message}</div>
+          )}
+          {teamMut.data && (
+            <div className="mt-2 text-emerald-700">
+              Created {teamMut.data.length} relationship{teamMut.data.length === 1 ? '' : 's'} ·
+              states: {teamMut.data.map((r) => r.state).join(', ')}
+            </div>
+          )}
         </div>
-        <button className="btn-stage">
-          Confirm team · create 4 relationships
+        <button
+          className="btn-stage"
+          onClick={() => teamMut.run()}
+          disabled={teamMut.loading || completeness === 0 || Boolean(teamMut.data)}
+        >
+          {teamMut.loading
+            ? 'Creating…'
+            : teamMut.data
+              ? 'Team confirmed ✓'
+              : `Confirm team · create ${completeness} relationship${completeness === 1 ? '' : 's'}`}
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M13 5l7 7-7 7" />
           </svg>
