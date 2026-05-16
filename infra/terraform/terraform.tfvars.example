@@ -1,2 +1,9 @@
 project_id = "your-gcp-project-id"
 region     = "asia-southeast1"
+
+# Usually same as project_id. Set explicitly if your ADC quota project differs.
+quota_project_id = "your-gcp-project-id"
+
+# Add your deployed frontend domain later, for example:
+# identity_platform_authorized_domains = ["carelink.example.com"]
+identity_platform_authorized_domains = []

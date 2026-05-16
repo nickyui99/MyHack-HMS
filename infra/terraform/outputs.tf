@@ -12,3 +12,8 @@ output "artifact_registry_repository" {
   description = "Artifact Registry Docker repository resource."
   value       = google_artifact_registry_repository.images.name
 }
+
+output "identity_platform_config_name" {
+  description = "Identity Platform project config name, when enabled."
+  value       = var.enable_identity_platform ? google_identity_platform_config.default[0].name : null
+}

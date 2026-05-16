@@ -10,8 +10,10 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
+  project               = var.project_id
+  region                = var.region
+  billing_project       = coalesce(var.quota_project_id, var.project_id)
+  user_project_override = true
 }
 
 resource "google_project_service" "required" {
@@ -48,6 +50,40 @@ resource "google_artifact_registry_repository" "images" {
   repository_id = var.artifact_registry_repository
   description   = "Docker images for CareLink services"
   format        = "DOCKER"
+
+  depends_on = [
+    google_project_service.required
+  ]
+}
+
+resource "google_identity_platform_config" "default" {
+  count = var.enable_identity_platform ? 1 : 0
+
+  project                    = var.project_id
+  authorized_domains         = var.identity_platform_authorized_domains
+  autodelete_anonymous_users = true
+
+  sign_in {
+    email {
+      enabled           = true
+      password_required = true
+    }
+
+    anonymous {
+      enabled = false
+    }
+
+    phone_number {
+      enabled = false
+    }
+  }
+
+  client {
+    permissions {
+      disabled_user_signup   = var.identity_platform_disable_user_signup
+      disabled_user_deletion = true
+    }
+  }
 
   depends_on = [
     google_project_service.required
