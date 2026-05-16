@@ -1,0 +1,44 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_outcome_0ba62df7e9",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_outcome_0ba62df7e9",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "summary",
+            "details"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "Outcome recorded \u2014 relationships updated",
+          "variant": "h2"
+        },
+        {
+          "id": "summary",
+          "component": "Text",
+          "text": "Updated 2 relationship weights. Graph delta: +1 nodes, +1 edges.",
+          "variant": "body"
+        },
+        {
+          "id": "details",
+          "component": "Text",
+          "text": "rel_1: 0.780 \u2192 0.800 (+0.020)\nrel_2: 0.860 \u2192 0.880 (+0.020)",
+          "variant": "caption"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_orchestrator_27efac17c1",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_orchestrator_27efac17c1",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "t1",
+            "t2"
+          ]
+        },
+        {
+          "id": "t1",
+          "component": "Text",
+          "text": "Hello",
+          "variant": "h2"
+        },
+        {
+          "id": "t2",
+          "component": "Text",
+          "text": "Welcome to CareLink."
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,171 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_team_assembly_f800f06b08",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateDataModel": {
+      "surfaceId": "srf_team_assembly_f800f06b08",
+      "path": "/",
+      "value": {
+        "picks": {
+          "cardiothoracic_surgeon": "act_suresh",
+          "cardiac_anaesthetist": "act_farah",
+          "perfusionist": "act_tan_ek",
+          "or_lead_nurse": "act_mariam"
+        }
+      }
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_team_assembly_f800f06b08",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "subtitle",
+            "role_1",
+            "pick_1",
+            "role_2",
+            "pick_2",
+            "role_3",
+            "pick_3",
+            "role_4",
+            "pick_4",
+            "lock_btn"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "Assemble CABG team \u2014 Encik Zainal",
+          "variant": "h2"
+        },
+        {
+          "id": "subtitle",
+          "component": "Text",
+          "text": "OR-2 \u00b7 07:00 tomorrow \u00b7 pick one per role",
+          "variant": "caption"
+        },
+        {
+          "id": "role_1",
+          "component": "Text",
+          "text": "Cardiothoracic Surgeon",
+          "variant": "h3"
+        },
+        {
+          "id": "pick_1",
+          "component": "ChoicePicker",
+          "label": "Choose",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "Dr Suresh \u00b7 86% \u00b7 APC valid",
+              "value": "act_suresh"
+            }
+          ],
+          "value": {
+            "path": "picks.cardiothoracic_surgeon"
+          }
+        },
+        {
+          "id": "role_2",
+          "component": "Text",
+          "text": "Cardiac Anaesthetist",
+          "variant": "h3"
+        },
+        {
+          "id": "pick_2",
+          "component": "ChoicePicker",
+          "label": "Choose",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "Dr Farah \u00b7 91% \u00b7 APC valid",
+              "value": "act_farah"
+            },
+            {
+              "label": "Dr Lim \u00b7 74% \u00b7 \u26a0 APC expired",
+              "value": "act_lim_ws"
+            }
+          ],
+          "value": {
+            "path": "picks.cardiac_anaesthetist"
+          }
+        },
+        {
+          "id": "role_3",
+          "component": "Text",
+          "text": "Perfusionist",
+          "variant": "h3"
+        },
+        {
+          "id": "pick_3",
+          "component": "ChoicePicker",
+          "label": "Choose",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "Mr Tan EK \u00b7 88% \u00b7 APC valid",
+              "value": "act_tan_ek"
+            }
+          ],
+          "value": {
+            "path": "picks.perfusionist"
+          }
+        },
+        {
+          "id": "role_4",
+          "component": "Text",
+          "text": "Or Lead Nurse",
+          "variant": "h3"
+        },
+        {
+          "id": "pick_4",
+          "component": "ChoicePicker",
+          "label": "Choose",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "Mariam BI \u00b7 85% \u00b7 APC valid",
+              "value": "act_mariam"
+            }
+          ],
+          "value": {
+            "path": "picks.or_lead_nurse"
+          }
+        },
+        {
+          "id": "lock_label",
+          "component": "Text",
+          "text": "Lock team"
+        },
+        {
+          "id": "lock_btn",
+          "component": "Button",
+          "child": "lock_label",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "lock_team",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "picks": {
+                  "path": "picks"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]
