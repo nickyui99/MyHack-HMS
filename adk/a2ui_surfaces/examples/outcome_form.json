@@ -1,0 +1,122 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_outcome_0d772e0daf",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_outcome_0d772e0daf",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "subtitle",
+            "surg",
+            "comp",
+            "notes",
+            "submit_btn"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "Log outcome \u2014 Encik Zainal",
+          "variant": "h2"
+        },
+        {
+          "id": "subtitle",
+          "component": "Text",
+          "text": "Day 2 post-op \u00b7 Ward 4B",
+          "variant": "caption"
+        },
+        {
+          "id": "surg",
+          "component": "ChoicePicker",
+          "label": "Surgical score (1-5)",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "1",
+              "value": "1"
+            },
+            {
+              "label": "2",
+              "value": "2"
+            },
+            {
+              "label": "3",
+              "value": "3"
+            },
+            {
+              "label": "4",
+              "value": "4"
+            },
+            {
+              "label": "5",
+              "value": "5"
+            }
+          ],
+          "value": {
+            "path": "outcome.surgical_score"
+          }
+        },
+        {
+          "id": "comp",
+          "component": "ChoicePicker",
+          "label": "Complications",
+          "variant": "mutuallyExclusive",
+          "options": [
+            {
+              "label": "None",
+              "value": "0"
+            },
+            {
+              "label": "Minor",
+              "value": "minor"
+            },
+            {
+              "label": "Major",
+              "value": "major"
+            }
+          ],
+          "value": {
+            "path": "outcome.complications"
+          }
+        },
+        {
+          "id": "notes",
+          "component": "TextField",
+          "label": "Notes (optional)",
+          "value": {
+            "path": "outcome.notes"
+          }
+        },
+        {
+          "id": "submit_lbl",
+          "component": "Text",
+          "text": "Submit outcome"
+        },
+        {
+          "id": "submit_btn",
+          "component": "Button",
+          "child": "submit_lbl",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "record_case_outcome",
+              "context": {
+                "case_id": "case_zainal_2026"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

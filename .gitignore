@@ -1,3 +1,17 @@
+# Reference materials (rubrics, problem statement PDFs, slides, .docx) — not source.
+docs/
+
+# ADK runtime artifacts (session.db, file-artifact store).
+**/.adk/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Local environment
+.env
 # Node dependencies
 node_modules/
 backend/backend-dev.log

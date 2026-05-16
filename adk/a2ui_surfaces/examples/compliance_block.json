@@ -1,0 +1,102 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_compliance_a5f17d0d2c",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_compliance_a5f17d0d2c",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "intro",
+            "fcard_1",
+            "pick_again_btn",
+            "override_btn"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "\u26d4 Compliance block",
+          "variant": "h2"
+        },
+        {
+          "id": "intro",
+          "component": "Text",
+          "text": "The following picks cannot proceed:",
+          "variant": "caption"
+        },
+        {
+          "id": "fn_1",
+          "component": "Text",
+          "text": "Dr Lim Wei Sheng (Cardiac Anaesthetist)",
+          "variant": "h3"
+        },
+        {
+          "id": "fr_1",
+          "component": "Text",
+          "text": "APC MMC-44290 expired 2026-04-30"
+        },
+        {
+          "id": "fcol_1",
+          "component": "Column",
+          "children": [
+            "fn_1",
+            "fr_1"
+          ]
+        },
+        {
+          "id": "fcard_1",
+          "component": "Card",
+          "child": "fcol_1"
+        },
+        {
+          "id": "pa_lbl",
+          "component": "Text",
+          "text": "Pick different actor"
+        },
+        {
+          "id": "pick_again_btn",
+          "component": "Button",
+          "child": "pa_lbl",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "team_pick_again",
+              "context": {
+                "case_id": "case_zainal_2026"
+              }
+            }
+          }
+        },
+        {
+          "id": "ov_lbl",
+          "component": "Text",
+          "text": "Override with justification"
+        },
+        {
+          "id": "override_btn",
+          "component": "Button",
+          "child": "ov_lbl",
+          "variant": "default",
+          "action": {
+            "event": {
+              "name": "compliance_override",
+              "context": {
+                "case_id": "case_zainal_2026"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

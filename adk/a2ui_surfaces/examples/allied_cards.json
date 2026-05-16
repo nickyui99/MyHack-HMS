@@ -1,0 +1,178 @@
+[
+  {
+    "version": "v0.9",
+    "createSurface": {
+      "surfaceId": "srf_allied_health_b4410f2fb3",
+      "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"
+    }
+  },
+  {
+    "version": "v0.9",
+    "updateComponents": {
+      "surfaceId": "srf_allied_health_b4410f2fb3",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": [
+            "title",
+            "subtitle",
+            "card_1",
+            "card_2",
+            "card_3"
+          ]
+        },
+        {
+          "id": "title",
+          "component": "Text",
+          "text": "Post-CABG allied health",
+          "variant": "h2"
+        },
+        {
+          "id": "subtitle",
+          "component": "Text",
+          "text": "Ward 4B \u00b7 Bed 14 \u00b7 one-click book",
+          "variant": "caption"
+        },
+        {
+          "id": "name_1",
+          "component": "Text",
+          "text": "Physiotherapist \u2014 Priya Devi",
+          "variant": "h3"
+        },
+        {
+          "id": "score_1",
+          "component": "Text",
+          "text": "Match 92% \u00b7 vector 0.55 \u00b7 rule 1.0 \u00b7 outcome 0.97"
+        },
+        {
+          "id": "btnlbl_1",
+          "component": "Text",
+          "text": "Book"
+        },
+        {
+          "id": "book_1",
+          "component": "Button",
+          "child": "btnlbl_1",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "book_specialist",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "role": "physiotherapist",
+                "actor_id": "act_priya"
+              }
+            }
+          }
+        },
+        {
+          "id": "col_1",
+          "component": "Column",
+          "children": [
+            "name_1",
+            "score_1",
+            "book_1"
+          ]
+        },
+        {
+          "id": "card_1",
+          "component": "Card",
+          "child": "col_1"
+        },
+        {
+          "id": "name_2",
+          "component": "Text",
+          "text": "Dietician \u2014 Chen Mei Ling",
+          "variant": "h3"
+        },
+        {
+          "id": "score_2",
+          "component": "Text",
+          "text": "Match 88% \u00b7 vector 0.48 \u00b7 rule 1.0 \u00b7 outcome 0.94"
+        },
+        {
+          "id": "btnlbl_2",
+          "component": "Text",
+          "text": "Book"
+        },
+        {
+          "id": "book_2",
+          "component": "Button",
+          "child": "btnlbl_2",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "book_specialist",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "role": "dietician",
+                "actor_id": "act_meiling"
+              }
+            }
+          }
+        },
+        {
+          "id": "col_2",
+          "component": "Column",
+          "children": [
+            "name_2",
+            "score_2",
+            "book_2"
+          ]
+        },
+        {
+          "id": "card_2",
+          "component": "Card",
+          "child": "col_2"
+        },
+        {
+          "id": "name_3",
+          "component": "Text",
+          "text": "Occupational Therapist \u2014 Hafiz Bin Rashid",
+          "variant": "h3"
+        },
+        {
+          "id": "score_3",
+          "component": "Text",
+          "text": "Match 85% \u00b7 vector 0.46 \u00b7 rule 1.0 \u00b7 outcome 0.93"
+        },
+        {
+          "id": "btnlbl_3",
+          "component": "Text",
+          "text": "Book"
+        },
+        {
+          "id": "book_3",
+          "component": "Button",
+          "child": "btnlbl_3",
+          "variant": "primary",
+          "action": {
+            "event": {
+              "name": "book_specialist",
+              "context": {
+                "case_id": "case_zainal_2026",
+                "role": "occupational_therapist",
+                "actor_id": "act_hafiz"
+              }
+            }
+          }
+        },
+        {
+          "id": "col_3",
+          "component": "Column",
+          "children": [
+            "name_3",
+            "score_3",
+            "book_3"
+          ]
+        },
+        {
+          "id": "card_3",
+          "component": "Card",
+          "child": "col_3"
+        }
+      ]
+    }
+  }
+]

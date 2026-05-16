@@ -1,0 +1,30 @@
+[
+  {
+    "user_id": "gp.amirul@carelink.demo",
+    "display_name": "Dr Amirul Hassan",
+    "role": "general_practitioner",
+    "hospital_id": "klinik_mediviron_puchong",
+    "hospital_name": "Klinik Mediviron Puchong",
+    "actor_id": "act_amirul",
+    "allowed_agents": ["referral"]
+  },
+  {
+    "user_id": "coord.suri@carelink.demo",
+    "display_name": "Suri Wong",
+    "role": "or_coordinator",
+    "hospital_id": "hosp_sunway",
+    "hospital_name": "Sunway Medical Centre",
+    "actor_id": null,
+    "allowed_agents": ["team_assembly"]
+  },
+  {
+    "user_id": "ward.aisha@carelink.demo",
+    "display_name": "Nurse Aisha Rahman",
+    "role": "ward_nurse",
+    "hospital_id": "hosp_sunway",
+    "hospital_name": "Sunway Medical Centre",
+    "ward": "Ward 4B (Cardiac Step-Down)",
+    "actor_id": null,
+    "allowed_agents": ["allied_health", "outcome"]
+  }
+]
