@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import StageHero from '@/components/StageHero';
 import SourceBadge, { ErrorState } from '@/components/SourceBadge';
 import { loadActors, loadRelationships } from '@/data/source';
@@ -16,8 +16,12 @@ const RTYPES: ('All' | RelationshipType)[] = ['All', 'gp_referral', 'surgical_te
 const W = 720;
 const H = 480;
 
+// Synthetic id for the patient at the centre — keeps the patient node out
+// of the actor lookup map without colliding with any backend UUID.
+const PATIENT_NODE_ID = '__patient__';
+const PATIENT_POS = { x: W / 2, y: H / 2 };
+
 const POS: Record<string, { x: number; y: number }> = {
-  'case-zainal': { x: W / 2, y: H / 2 },
   'a-gp-01':     { x: 110, y: 100 },
   'a-card-01':   { x: 180, y: H / 2 },
   'a-cts-01':    { x: W - 200, y: H / 2 },
@@ -32,8 +36,6 @@ const POS: Record<string, { x: number; y: number }> = {
 /** Deterministic circular fallback layout for actor IDs not in POS. */
 function autoPos(id: string, index: number, total: number): { x: number; y: number } {
   if (POS[id]) return POS[id];
-  // Distribute around the patient on a ring; pick radius based on index parity
-  // so two concentric rings reduce overlap for larger graphs.
   const ring = index % 2 === 0 ? 180 : 230;
   const theta = (index / Math.max(total, 1)) * Math.PI * 2;
   return {
@@ -63,21 +65,26 @@ const STATE_STYLE: Record<RelationshipState, { stroke: string; dash: string }> =
   blocked:   { stroke: '#e11d48', dash: '2 3' },
 };
 
+type DragRef =
+  | { kind: 'node'; id: string; offX: number; offY: number }
+  | { kind: 'pan'; startSp: { x: number; y: number }; startTx: number; startTy: number }
+  | null;
+
 export default function Graph() {
   const { active } = useActiveCase();
   const [dept, setDept] = useState('All');
   const [rstate, setRstate] = useState<typeof STATES[number]>('All');
   const [rtype, setRtype] = useState<typeof RTYPES[number]>('All');
   const [hoverEdge, setHoverEdge] = useState<string | null>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>('a-cts-01');
+  const [selectedNode, setSelectedNode] = useState<string | null>(PATIENT_NODE_ID);
 
+  // Re-fetch relationships when the user switches patients in the TopBar.
   const relsFetcher = useCallback(
     () => loadRelationships({ case_id: active.id }),
     [active.id],
   );
   const actorsFetcher = useCallback(() => loadActors(), []);
-
-  const rels = useApi(relsFetcher, []);
+  const rels = useApi(relsFetcher, [active.id]);
   const acts = useApi(actorsFetcher, []);
 
   const relationships = rels.data?.data ?? [];
@@ -97,25 +104,141 @@ export default function Graph() {
   );
 
   const visibleNodes = useMemo(() => {
-    const ids = new Set<string>(['case-zainal']);
+    const ids = new Set<string>([PATIENT_NODE_ID]);
     visibleEdges.forEach((r) => { ids.add(r.actorA); ids.add(r.actorB); });
     return ids;
   }, [visibleEdges]);
 
-  // Stable id → position for every visible actor (real UUIDs included).
   const visibleActorIds = useMemo(
     () => actors.filter((a) => visibleNodes.has(a.id)).map((a) => a.id),
     [actors, visibleNodes],
   );
   const positionFor = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
-    map.set('case-zainal', POS['case-zainal']);
+    map.set(PATIENT_NODE_ID, PATIENT_POS);
     visibleActorIds.forEach((id, i) => map.set(id, autoPos(id, i, visibleActorIds.length)));
     return map;
   }, [visibleActorIds]);
 
+  // ── Interactivity: drag nodes, pan background, wheel-zoom ──────────
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, { x: number; y: number }>>({});
+  const [view, setView] = useState({ tx: 0, ty: 0, zoom: 1 });
+  const [isDragging, setIsDragging] = useState<'node' | 'pan' | null>(null);
+  const dragRef = useRef<DragRef>(null);
+  const movedRef = useRef(false);
+
+  // Reset layout/view when the patient changes — different graph, fresh slate.
+  useEffect(() => {
+    setOverrides({});
+    setView({ tx: 0, ty: 0, zoom: 1 });
+    setSelectedNode(PATIENT_NODE_ID);
+  }, [active.id]);
+
+  function svgPoint(e: { clientX: number; clientY: number }): { x: number; y: number } {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const r = pt.matrixTransform(ctm.inverse());
+    return { x: r.x, y: r.y };
+  }
+
+  function toGroupSpace(svgP: { x: number; y: number }) {
+    return { x: (svgP.x - view.tx) / view.zoom, y: (svgP.y - view.ty) / view.zoom };
+  }
+
+  const resolvedPos = useCallback(
+    (id: string) => overrides[id] ?? positionFor.get(id) ?? PATIENT_POS,
+    [overrides, positionFor],
+  );
+
+  const onNodeMouseDown = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    movedRef.current = false;
+    const sp = svgPoint(e);
+    const gp = toGroupSpace(sp);
+    const cur = resolvedPos(id);
+    dragRef.current = { kind: 'node', id, offX: cur.x - gp.x, offY: cur.y - gp.y };
+    setIsDragging('node');
+  };
+
+  const onBgMouseDown = (e: React.MouseEvent) => {
+    movedRef.current = false;
+    const sp = svgPoint(e);
+    dragRef.current = { kind: 'pan', startSp: sp, startTx: view.tx, startTy: view.ty };
+    setIsDragging('pan');
+  };
+
+  // Global listeners so the drag keeps going if the cursor leaves the SVG.
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      movedRef.current = true;
+      const sp = svgPoint(e);
+      if (d.kind === 'node') {
+        const gp = toGroupSpace(sp);
+        setOverrides((m) => ({ ...m, [d.id]: { x: gp.x + d.offX, y: gp.y + d.offY } }));
+      } else {
+        setView((v) => ({
+          ...v,
+          tx: d.startTx + (sp.x - d.startSp.x),
+          ty: d.startTy + (sp.y - d.startSp.y),
+        }));
+      }
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      setIsDragging(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    // svgPoint and toGroupSpace close over current view — re-bind when it changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDragging, view.tx, view.ty, view.zoom]);
+
+  // Native wheel listener: React's synthetic wheel handler is passive, so it
+  // can't call preventDefault() to stop the page from scrolling.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const sp = svgPoint(e);
+      const gp = toGroupSpace(sp);
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoom = Math.max(0.3, Math.min(3, view.zoom * factor));
+      setView({
+        zoom: newZoom,
+        tx: sp.x - newZoom * gp.x,
+        ty: sp.y - newZoom * gp.y,
+      });
+    };
+    svg.addEventListener('wheel', handler, { passive: false });
+    return () => svg.removeEventListener('wheel', handler);
+  }, [view.tx, view.ty, view.zoom]);
+
+  const handleNodeClick = (id: string) => {
+    if (movedRef.current) return; // dragged, not clicked
+    setSelectedNode(id);
+  };
+
+  const resetView = () => {
+    setOverrides({});
+    setView({ tx: 0, ty: 0, zoom: 1 });
+  };
+
   const selectedActor: Actor | undefined =
-    selectedNode && selectedNode !== 'case-zainal'
+    selectedNode && selectedNode !== PATIENT_NODE_ID
       ? actorById.get(selectedNode)
       : undefined;
   const selectedEdges = relationships.filter(
@@ -124,6 +247,7 @@ export default function Graph() {
 
   const loading = rels.loading || acts.loading;
   const error = rels.error || acts.error;
+  const patientLabel = active.patientName.split(' ').slice(-1)[0] || active.patientName;
 
   return (
     <>
@@ -138,6 +262,13 @@ export default function Graph() {
             <Select label="Department" value={dept} onChange={setDept} options={DEPTS} />
             <Select label="State"      value={rstate} onChange={(v) => setRstate(v as RelationshipState | 'All')} options={STATES} />
             <Select label="Type"       value={rtype} onChange={(v) => setRtype(v as RelationshipType | 'All')} options={RTYPES} />
+            <button
+              onClick={resetView}
+              className="rounded-full border border-line bg-paper px-2.5 py-1 text-[10.5px] uppercase tracking-[0.14em] text-ink-muted transition hover:bg-cream/60"
+              title="Reset layout & zoom"
+            >
+              Reset view
+            </button>
             <div className="ml-auto flex items-center gap-3 text-ink-muted">
               {source && <SourceBadge source={source} />}
               <Legend swatch={STATE_STYLE.proposed.stroke} dash>Proposed</Legend>
@@ -156,9 +287,12 @@ export default function Graph() {
 
           {!loading && !error && (
             <svg
+              ref={svgRef}
               viewBox={`0 0 ${W} ${H}`}
-              className="block h-[480px] w-full"
+              className="block h-[480px] w-full select-none"
+              onMouseDown={onBgMouseDown}
               style={{
+                cursor: isDragging === 'pan' ? 'grabbing' : isDragging === 'node' ? 'grabbing' : 'grab',
                 background:
                   'radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--stage-soft) 70%, white) 0%, white 70%)',
               }}
@@ -168,93 +302,109 @@ export default function Graph() {
                   <circle cx="1" cy="1" r="0.6" fill="#cfc4ad" />
                 </pattern>
               </defs>
+              {/* Background stays put while content pans/zooms. */}
               <rect width={W} height={H} fill="url(#dot)" />
 
-              {visibleEdges.map((r) => {
-                const a = positionFor.get(r.actorA) ?? POS['case-zainal'];
-                const b = positionFor.get(r.actorB) ?? POS['case-zainal'];
-                const s = STATE_STYLE[r.state];
-                const isHover = hoverEdge === r.id;
-                return (
-                  <g key={r.id}
-                     onMouseEnter={() => setHoverEdge(r.id)}
-                     onMouseLeave={() => setHoverEdge(null)}
-                     className="cursor-pointer">
-                    <line
-                      x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                      stroke={s.stroke}
-                      strokeWidth={isHover ? 3.5 : 1.2 + r.weight * 2.5}
-                      strokeDasharray={s.dash}
-                      opacity={isHover ? 1 : 0.85}
-                    />
-                    {isHover && (
-                      <text
-                        x={(a.x + b.x) / 2}
-                        y={(a.y + b.y) / 2 - 8}
-                        textAnchor="middle"
-                        className="fill-ink text-[10px] font-medium"
-                      >
-                        {r.type.replace('_', ' ')} · w {r.weight.toFixed(2)}
+              <g transform={`translate(${view.tx} ${view.ty}) scale(${view.zoom})`}>
+                {visibleEdges.map((r) => {
+                  const a = resolvedPos(r.actorA);
+                  const b = resolvedPos(r.actorB);
+                  const s = STATE_STYLE[r.state];
+                  const isHover = hoverEdge === r.id;
+                  return (
+                    <g key={r.id}
+                       onMouseEnter={() => !isDragging && setHoverEdge(r.id)}
+                       onMouseLeave={() => setHoverEdge(null)}
+                       className="cursor-pointer">
+                      <line
+                        x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                        stroke={s.stroke}
+                        strokeWidth={isHover ? 3.5 : 1.2 + r.weight * 2.5}
+                        strokeDasharray={s.dash}
+                        opacity={isHover ? 1 : 0.85}
+                      />
+                      {isHover && (
+                        <text
+                          x={(a.x + b.x) / 2}
+                          y={(a.y + b.y) / 2 - 8}
+                          textAnchor="middle"
+                          className="fill-ink text-[10px] font-medium"
+                        >
+                          {r.type.replace('_', ' ')} · w {r.weight.toFixed(2)}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+
+                {/* Patient node — also draggable. */}
+                <g
+                  onMouseDown={(e) => onNodeMouseDown(PATIENT_NODE_ID, e)}
+                  onClick={() => handleNodeClick(PATIENT_NODE_ID)}
+                  style={{ cursor: 'move' }}
+                >
+                  {(() => {
+                    const p = resolvedPos(PATIENT_NODE_ID);
+                    return (
+                      <>
+                        <circle cx={p.x} cy={p.y} r="44"
+                          fill="none" stroke="var(--stage-mid)" strokeWidth="2" opacity="0.35"
+                          strokeDasharray="3 4" />
+                        <circle cx={p.x} cy={p.y} r="36"
+                          fill="var(--stage-deep)" stroke="white" strokeWidth="3.5"
+                          opacity={selectedNode === PATIENT_NODE_ID ? 1 : 0.95} />
+                        <text x={p.x} y={p.y - 2}
+                          textAnchor="middle"
+                          className="fill-white text-[9px] font-semibold uppercase tracking-[0.16em]">
+                          Patient
+                        </text>
+                        <text x={p.x} y={p.y + 12}
+                          textAnchor="middle"
+                          className="fill-white text-[11px] font-semibold">
+                          {patientLabel}
+                        </text>
+                      </>
+                    );
+                  })()}
+                </g>
+
+                {actors.filter((a) => visibleNodes.has(a.id) && positionFor.has(a.id)).map((a) => {
+                  const p = resolvedPos(a.id);
+                  const color = COLOR_BY_TYPE[a.type] ?? '#64748b';
+                  const isSel = selectedNode === a.id;
+                  return (
+                    <g key={a.id}
+                       onMouseDown={(e) => onNodeMouseDown(a.id, e)}
+                       onClick={() => handleNodeClick(a.id)}
+                       style={{ cursor: 'move' }}>
+                      <circle cx={p.x} cy={p.y} r={isSel ? 26 : 22}
+                        fill="white" stroke={color} strokeWidth={isSel ? 3 : 2.2} />
+                      <text x={p.x} y={p.y + 4} textAnchor="middle"
+                        className="fill-ink text-[10px] font-semibold">
+                        {initials(a.name)}
                       </text>
-                    )}
-                  </g>
-                );
-              })}
-
-              {/* Patient node */}
-              <g onClick={() => setSelectedNode('case-zainal')} className="cursor-pointer">
-                <circle cx={POS['case-zainal'].x} cy={POS['case-zainal'].y} r="44"
-                  fill="none" stroke="var(--stage-mid)" strokeWidth="2" opacity="0.35"
-                  strokeDasharray="3 4" />
-                <circle cx={POS['case-zainal'].x} cy={POS['case-zainal'].y} r="36"
-                  fill="var(--stage-deep)" stroke="white" strokeWidth="3.5"
-                  opacity={selectedNode === 'case-zainal' ? 1 : 0.95} />
-                <text x={POS['case-zainal'].x} y={POS['case-zainal'].y - 2}
-                  textAnchor="middle"
-                  className="fill-white text-[9px] font-semibold uppercase tracking-[0.16em]">
-                  Patient
-                </text>
-                <text x={POS['case-zainal'].x} y={POS['case-zainal'].y + 12}
-                  textAnchor="middle"
-                  className="fill-white text-[11px] font-semibold">
-                  Zainal
-                </text>
+                      <text x={p.x} y={p.y + 40} textAnchor="middle"
+                        className="fill-ink text-[10px]">
+                        {a.name.split(' ').slice(0, 3).join(' ')}
+                      </text>
+                      <text x={p.x} y={p.y + 52} textAnchor="middle"
+                        className="fill-ink-muted text-[9px]">
+                        {a.type}
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
-
-              {actors.filter((a) => visibleNodes.has(a.id) && positionFor.has(a.id)).map((a) => {
-                const p = positionFor.get(a.id)!;
-                const color = COLOR_BY_TYPE[a.type] ?? '#64748b';
-                const isSel = selectedNode === a.id;
-                return (
-                  <g key={a.id}
-                     onClick={() => setSelectedNode(a.id)}
-                     className="cursor-pointer">
-                    <circle cx={p.x} cy={p.y} r={isSel ? 26 : 22}
-                      fill="white" stroke={color} strokeWidth={isSel ? 3 : 2.2} />
-                    <text x={p.x} y={p.y + 4} textAnchor="middle"
-                      className="fill-ink text-[10px] font-semibold">
-                      {initials(a.name)}
-                    </text>
-                    <text x={p.x} y={p.y + 40} textAnchor="middle"
-                      className="fill-ink text-[10px]">
-                      {a.name.split(' ').slice(0, 3).join(' ')}
-                    </text>
-                    <text x={p.x} y={p.y + 52} textAnchor="middle"
-                      className="fill-ink-muted text-[9px]">
-                      {a.type}
-                    </text>
-                  </g>
-                );
-              })}
             </svg>
           )}
 
           <div className="flex items-center justify-between border-t border-line bg-canvas/60 px-4 py-2 text-[11px] text-ink-muted">
             <span>
               <span className="font-semibold text-ink">{visibleEdges.length}</span> relationships ·{' '}
-              <span className="font-semibold text-ink">{visibleNodes.size}</span> entities
+              <span className="font-semibold text-ink">{visibleNodes.size}</span> entities ·{' '}
+              <span className="font-mono">{(view.zoom * 100).toFixed(0)}%</span>
             </span>
-            <span className="font-mono">GET /relationships, /actors</span>
+            <span className="text-ink-subtle">Drag nodes · drag background to pan · scroll to zoom</span>
           </div>
         </div>
 
@@ -262,7 +412,7 @@ export default function Graph() {
           <InspectorCard
             selectedActor={selectedActor}
             edges={selectedEdges}
-            patientCentered={selectedNode === 'case-zainal'}
+            patientCentered={selectedNode === PATIENT_NODE_ID}
             patientName={active.patientName}
             patientId={active.id}
           />
