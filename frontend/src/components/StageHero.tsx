@@ -52,11 +52,6 @@ export default function StageHero({ stage, signals, cta }: Props) {
             {stage.subtitle}
           </p>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <DetailRow label="The question" value={stage.question} />
-            <DetailRow label="The mechanism" value={stage.mechanism} />
-          </div>
-
           {cta && (
             <div className="mt-5">
               <button className="btn-stage" onClick={cta.onClick}>
@@ -91,15 +86,6 @@ export default function StageHero({ stage, signals, cta }: Props) {
       </div>
 
     </section>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-line bg-cream/40 px-4 py-3">
-      <div className="section-label">{label}</div>
-      <div className="mt-1 text-[13px] leading-relaxed text-ink">{value}</div>
-    </div>
   );
 }
 
